@@ -1,27 +1,16 @@
-
 from openai import OpenAI
-import os
 from pathlib import Path
+import sys
 
-from dotenv import load_dotenv
+APP_DIR = Path(__file__).resolve().parent
+if str(APP_DIR) not in sys.path:
+    sys.path.append(str(APP_DIR))
 
-def load_settings():
-    env_path = Path(__file__).resolve().parent.parent / ".env"
-    load_dotenv(env_path)
+from core.config import Settings
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_MODEL")
 
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY is not set. Add it to your .env file.")
-
-    if not model:
-        raise ValueError("OPENAI_MODEL is not set. Add it to your .env file.")
-
-    return api_key, model
-
-OPENAI_API_KEY, OPENAI_MODEL = load_settings()
-client = OpenAI(api_key=OPENAI_API_KEY)
+settings = Settings.load()
+client = OpenAI(api_key=settings.api_key)
 
 
 def build_prompt(user_input, chat_history):
@@ -42,7 +31,7 @@ def get_ai_response(user_input, chat_history=None):
     chat_history = chat_history or []
     prompt = build_prompt(user_input, chat_history)
     response = client.responses.create(
-        model=OPENAI_MODEL,
+        model=settings.model,
         input=prompt,
     )
     return response.output_text.strip()

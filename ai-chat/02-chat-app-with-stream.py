@@ -1,30 +1,18 @@
 import asyncio
 from pathlib import Path
+import sys
 
 from openai import AsyncOpenAI
-import os
 
-from dotenv import load_dotenv
+APP_DIR = Path(__file__).resolve().parent
+if str(APP_DIR) not in sys.path:
+    sys.path.append(str(APP_DIR))
 
-def load_settings():
-    env_path = Path(__file__).resolve().parent.parent / ".env"
-    load_dotenv(env_path)
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_MODEL")
-
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY is not set. Add it to your .env file.")
-
-    if not model:
-        raise ValueError("OPENAI_MODEL is not set. Add it to your .env file.")
-
-    return api_key, model
-    load_settings = load_settings_module.load_settings
+from core.config import Settings
 
 
-OPENAI_API_KEY, OPENAI_MODEL = load_settings()
-async_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+settings = Settings.load()
+async_client = AsyncOpenAI(api_key=settings.api_key)
 
 
 def build_prompt(user_input, chat_history):
@@ -45,7 +33,7 @@ async def get_ai_response_stream(user_input, chat_history=None):
     chat_history = chat_history or []
     prompt = build_prompt(user_input, chat_history)
     response = await async_client.responses.create(
-        model=OPENAI_MODEL,
+        model=settings.model,
         input=prompt,
         stream=True,
     )

@@ -8,7 +8,7 @@ APP_DIR = Path(__file__).resolve().parent
 if str(APP_DIR) not in sys.path:
     sys.path.append(str(APP_DIR))
 
-from core.config import Settings
+from config import Settings
 
 
 settings = Settings.load()

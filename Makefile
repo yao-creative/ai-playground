@@ -1,12 +1,12 @@
 PYTHON := uv run python
-UNITTEST := $(PYTHON) -m unittest discover -s tests -p 'test_*.py'
+PYTEST := uv run pytest
 
 .PHONY: test test-chat run-history run-stream run-rag
 
 test: test-chat
 
 test-chat:
-	$(UNITTEST)
+	$(PYTEST) tests/test_ai_chat_entrypoints.py
 
 run-history:
 	uv run ai-chat/01-chat-app-with-history.py

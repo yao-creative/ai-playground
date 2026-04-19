@@ -2,6 +2,9 @@ import tiktoken
 
 from domain import Document, Tokenizer
 
+from sentence_transformers import SentenceTransformer
+import faiss
+
 
 class TiktokenTokenizer:
     def __init__(self, model: str) -> None:
@@ -46,3 +49,38 @@ class KeywordRetrievalStrategy:
 
         scored_documents.sort(key=lambda item: item[0], reverse=True)
         return [document for _, document in scored_documents[:limit]]
+
+
+class EmbeddingRetrievalStrategy:
+    def __init__(self, model: str) -> None:
+        self.model = SentenceTransformer(model)
+        self.index = faiss.IndexFlatL2(self.model.get_embedding_dimension())
+        self._has_index = False
+
+    def build_index(self, documents: list[Document]) -> None:
+        if not documents:
+            self._has_index = False
+            return
+
+        embeddings = self.model.encode(
+            [document.text for document in documents],
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        ).astype("float32")
+        self.index.add(embeddings)
+        self._has_index = True
+
+    def retrieve(self, query: str, documents: list[Document], limit: int = 3) -> list[Document]:
+        if not documents:
+            return []
+
+        if not self._has_index:
+            self.build_index(documents)
+
+        query_embedding = self.model.encode(
+            [query],
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        ).astype("float32")
+        _, indices = self.index.search(query_embedding, min(limit, len(documents)))
+        return [documents[i] for i in indices[0] if i != -1]

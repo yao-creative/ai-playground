@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 @dataclass(frozen=True)
 class Settings:
     api_key: str
-    model: str
+    chat_model: str
+    embedding_model: str
 
     @classmethod
     def load(cls) -> "Settings":
@@ -16,17 +17,24 @@ class Settings:
         load_dotenv(env_path)
 
         api_key = os.getenv("OPENAI_API_KEY")
-        model = os.getenv("OPENAI_MODEL")
+        chat_model = os.getenv("OPENAI_MODEL")
+        embedding_model = os.getenv(
+            "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+        )
 
         if not api_key:
             raise ValueError("OPENAI_API_KEY is not set. Add it to your .env file.")
 
-        if not model:
+        if not chat_model:
             raise ValueError("OPENAI_MODEL is not set. Add it to your .env file.")
 
-        return cls(api_key=api_key, model=model)
+        return cls(
+            api_key=api_key,
+            chat_model=chat_model,
+            embedding_model=embedding_model,
+        )
 
 
 def load_settings() -> tuple[str, str]:
     settings = Settings.load()
-    return settings.api_key, settings.model
+    return settings.api_key, settings.chat_model

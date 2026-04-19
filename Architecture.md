@@ -310,3 +310,120 @@ sequenceDiagram
 - Start in Python unless your main target is frontend product work, in which case pair Python backends with `Vercel AI SDK` on the UI side.
 - Do not start with multi-agent systems. Earn them by first making single-agent context assembly reliable.
 - Treat every tutorial as an eval project. If a tutorial does not produce trace data and failure cases, it is incomplete.
+
+# Edit 2 AI Chat 03 RAG Chat 2026-04-19 11:42 Branch: main
+
+## Terminal RAG Chat Request Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User Terminal Input
+    participant App as TerminalChatApp<br/>ai-chat/03-rag-chat/terminal_app.py
+    participant Bot as RAGChatbot<br/>ai-chat/03-rag-chat/chatbot.py
+    participant Retrieve as KeywordRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Tokenizer as TiktokenTokenizer<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Corpus as Document Corpus<br/>ai-chat/03-rag-chat/data.py
+    participant OpenAI as OpenAI Responses API
+
+    User->>App: Enter question in terminal
+    App->>Bot: stream_chat_response(user_text, chat_history)
+    Bot->>Bot: build_prompt(user_input, chat_history)
+    Bot->>Retrieve: retrieve(user_input, self.documents, limit=3)
+    Retrieve->>Tokenizer: tokenize(query)
+    Tokenizer->>Tokenizer: encoding.encode(text)
+    loop each token id in query
+        Tokenizer->>Tokenizer: decode one token id
+        Tokenizer->>Tokenizer: strip + lower + keep alnum only
+        Tokenizer->>Tokenizer: add compact token into query term set
+    end
+    Retrieve->>Corpus: iterate documents in build order
+    loop each document
+        Retrieve->>Retrieve: searchable_text = title + category + text
+        Retrieve->>Tokenizer: tokenize(searchable_text)
+        Tokenizer->>Tokenizer: build normalized document term set
+        Retrieve->>Retrieve: overlap = len(query_terms & doc_terms)
+        alt overlap > 0
+            Retrieve->>Retrieve: append (overlap, document)
+        else overlap == 0
+            Retrieve->>Retrieve: skip document
+        end
+    end
+    Retrieve->>Retrieve: sort scored documents by overlap descending
+    Retrieve-->>Bot: top matching documents, max 3
+    Bot->>Bot: append "Retrieved context:" lines with [id] title (category): text
+    Bot->>Bot: append prior conversation turns if present
+    Bot->>OpenAI: responses.create(model, input=prompt, stream=True)
+    loop streamed response events
+        OpenAI-->>Bot: response.output_text.delta
+        Bot-->>App: yield text chunk
+        App-->>User: print chunk immediately
+    end
+    App->>App: store User and Assistant turns after stream completes
+```
+
+## Retrieval Edge Cases Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Bot as RAGChatbot
+    participant Retrieve as KeywordRetrievalStrategy
+    participant Tokenizer as TiktokenTokenizer
+    participant Docs as Documents
+
+    Bot->>Retrieve: retrieve(query, documents, limit=3)
+    Retrieve->>Tokenizer: tokenize(query)
+    alt query_terms is empty after normalization
+        Tokenizer-->>Retrieve: empty set
+        Retrieve-->>Bot: documents[:limit]
+        Bot->>Bot: include first three corpus documents as fallback context
+    else query_terms not empty
+        Tokenizer-->>Retrieve: normalized query term set
+        loop each document
+            Retrieve->>Docs: compute overlap with document term set
+        end
+        alt no document has overlap
+            Retrieve-->>Bot: []
+            Bot->>Bot: omit Retrieved context section entirely
+        else one or more documents match
+            Retrieve->>Retrieve: descending overlap sort
+            Note over Retrieve: tie order stays aligned with original corpus order<br/>because Python sort is stable
+            Retrieve-->>Bot: top 3 matched documents
+        end
+    end
+```
+
+## Implementation Notes
+
+- Composition root: `main.py` wires `Settings`, `AsyncOpenAI`, `TiktokenTokenizer`, `KeywordRetrievalStrategy`, `RAGChatbot`, and `TerminalChatApp`.
+- Corpus construction is static. `data.py` converts `RAW_DOCUMENTS` into immutable `Document` dataclass instances once during startup.
+- Retrieval is purely lexical. There is no embedding index, vector store, reranker, or persistence layer in this tutorial.
+- `TiktokenTokenizer.tokenize()` produces a `set[str]` of normalized terms, not an ordered token stream. Duplicate terms are intentionally collapsed before scoring.
+- Normalization in `retrieval.py` is strict:
+  - token ids come from `tiktoken.encoding_for_model(model)` with fallback to `o200k_base`
+  - each token id is decoded individually
+  - whitespace is stripped
+  - text is lowercased
+  - non-alphanumeric characters are removed
+  - empty results are discarded
+- Document scoring is simple set intersection. A document score is the count of unique normalized terms shared by query and document, not frequency-weighted relevance.
+- Document text used for retrieval is assembled from `title`, `category`, and `text`. This means category labels such as `hr` or `security` can directly influence ranking.
+- Matching documents are stored as `(overlap, document)` tuples, sorted in descending score order, and truncated to `limit=3`.
+- Tie behavior is deterministic relative to corpus order because the sort key only uses overlap and Python sorting is stable.
+- Prompt construction is additive:
+  - start with the system prompt
+  - add retrieved document bullets only if retrieval returns at least one document
+  - add full chat history if present
+  - append the current `User:` turn and final `Assistant:` cue
+- The chat loop keeps conversation history only in process memory inside `TerminalChatApp.chat_history`. Restarting the process drops prior turns.
+- Streaming is one-way from the OpenAI Responses API into the terminal. The assistant response is buffered locally only so the completed answer can be stored back into chat history after printing.
+
+## Retrieval Notes
+
+- The retrieval fallback is asymmetric:
+  - empty normalized query returns the first three documents
+  - non-empty query with zero matches returns no documents
+- That asymmetry means punctuation-only or otherwise non-alphanumeric queries still inject default context into the prompt, while specific unmatched queries do not.
+- Because scoring is based on unique-term overlap, repeated words in a document do not increase its rank.
+- Because each document is retokenized on every user turn, retrieval cost scales linearly with both corpus size and document length for every prompt build.

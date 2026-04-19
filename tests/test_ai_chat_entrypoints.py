@@ -22,6 +22,7 @@ def test_all_entrypoints_start_and_exit_cleanly(script_path: Path) -> None:
         capture_output=True,
         text=True,
         check=False,
+        timeout=10,
     )
 
     assert completed.returncode == 0, (

@@ -6,6 +6,10 @@ from sentence_transformers import SentenceTransformer
 import faiss
 
 
+def serialize_document_for_retrieval(document: Document) -> str:
+    return " ".join((document.title, document.category, document.text))
+
+
 class TiktokenTokenizer:
     def __init__(self, model: str) -> None:
         try:
@@ -33,6 +37,17 @@ class TiktokenTokenizer:
 class KeywordRetrievalStrategy:
     def __init__(self, tokenizer: Tokenizer) -> None:
         self.tokenizer = tokenizer
+        self._document_terms: dict[str, tuple[str, set[str]]] = {}
+
+    def _tokenize_document(self, document: Document) -> set[str]:
+        serialized_document = serialize_document_for_retrieval(document)
+        cached_entry = self._document_terms.get(document.id)
+        if cached_entry is not None and cached_entry[0] == serialized_document:
+            return cached_entry[1]
+
+        doc_terms = self.tokenizer.tokenize(serialized_document)
+        self._document_terms[document.id] = (serialized_document, doc_terms)
+        return doc_terms
 
     def retrieve(self, query: str, documents: list[Document], limit: int = 3) -> list[Document]:
         query_terms = self.tokenizer.tokenize(query)
@@ -41,8 +56,7 @@ class KeywordRetrievalStrategy:
 
         scored_documents: list[tuple[int, Document]] = []
         for document in documents:
-            searchable_text = " ".join((document.title, document.category, document.text))
-            doc_terms = self.tokenizer.tokenize(searchable_text)
+            doc_terms = self._tokenize_document(document)
             overlap = len(query_terms & doc_terms)
             if overlap:
                 scored_documents.append((overlap, document))
@@ -52,29 +66,42 @@ class KeywordRetrievalStrategy:
 
 
 class EmbeddingRetrievalStrategy:
-    def __init__(self, model: str) -> None:
+    def __init__(self, model: str, min_similarity: float = 0.3) -> None:
         self.model = SentenceTransformer(model)
-        self.index = faiss.IndexFlatL2(self.model.get_embedding_dimension())
+        self.dimension = self.model.get_sentence_embedding_dimension()
+        self.index = faiss.IndexFlatIP(self.dimension)
         self._has_index = False
+        self.min_similarity = min_similarity
+        self._indexed_documents: list[tuple[str, str]] = []
 
     def build_index(self, documents: list[Document]) -> None:
+        self.index = faiss.IndexFlatIP(self.dimension)
+        self._indexed_documents = []
+
         if not documents:
             self._has_index = False
             return
 
+        serialized_documents = [serialize_document_for_retrieval(document) for document in documents]
         embeddings = self.model.encode(
-            [document.text for document in documents],
+            serialized_documents,
             convert_to_numpy=True,
             normalize_embeddings=True,
         ).astype("float32")
         self.index.add(embeddings)
+        self._indexed_documents = list(
+            zip((document.id for document in documents), serialized_documents, strict=True)
+        )
         self._has_index = True
 
     def retrieve(self, query: str, documents: list[Document], limit: int = 3) -> list[Document]:
         if not documents:
             return []
 
-        if not self._has_index:
+        indexed_documents = [
+            (document.id, serialize_document_for_retrieval(document)) for document in documents
+        ]
+        if not self._has_index or indexed_documents != self._indexed_documents:
             self.build_index(documents)
 
         query_embedding = self.model.encode(
@@ -82,5 +109,12 @@ class EmbeddingRetrievalStrategy:
             convert_to_numpy=True,
             normalize_embeddings=True,
         ).astype("float32")
-        _, indices = self.index.search(query_embedding, min(limit, len(documents)))
-        return [documents[i] for i in indices[0] if i != -1]
+        scores, indices = self.index.search(query_embedding, min(limit, len(documents)))
+
+        results: list[Document] = []
+        for score, index in zip(scores[0], indices[0], strict=True):
+            if index == -1 or score < self.min_similarity:
+                continue
+            results.append(documents[index])
+
+        return results

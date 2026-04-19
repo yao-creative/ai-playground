@@ -31,6 +31,7 @@ There are three runnable entrypoints:
    A tiny RAG example that:
    - loads a fixed in-memory document set
    - retrieves documents with simple keyword overlap using model tokenization
+   - optionally retrieves documents with sentence embeddings plus FAISS
    - appends retrieved context to the prompt
    - streams the answer back to the terminal
 
@@ -47,6 +48,7 @@ EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ```
 
 `OPENAI_MODEL` is used for chat generation. `EMBEDDING_MODEL` is used only by the embedding retrieval path in `03-rag-chat`.
+When embedding similarity is weak, the retriever now returns no documents instead of forcing unrelated context into the prompt.
 
 Install dependencies:
 

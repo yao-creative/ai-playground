@@ -427,3 +427,114 @@ sequenceDiagram
 - That asymmetry means punctuation-only or otherwise non-alphanumeric queries still inject default context into the prompt, while specific unmatched queries do not.
 - Because scoring is based on unique-term overlap, repeated words in a document do not increase its rank.
 - Because each document is retokenized on every user turn, retrieval cost scales linearly with both corpus size and document length for every prompt build.
+
+# Edit 3 RAG Retrieval Hardening 2026-04-19 17:53 Branch: feat/retrieval/embeddings
+
+## Shared Retrieval Text Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Main as build_app<br/>ai-chat/03-rag-chat/main.py
+    participant Settings as Settings.load<br/>ai-chat/config.py
+    participant Keyword as KeywordRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Embed as EmbeddingRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Serialize as serialize_document_for_retrieval<br/>ai-chat/03-rag-chat/retrieval.py
+    participant ST as SentenceTransformer
+    participant Faiss as FAISS IndexFlatIP
+
+    Main->>Settings: load()
+    Settings-->>Main: api_key + chat_model + embedding_model
+    alt strategy == "keyword"
+        Main->>Keyword: construct(tokenizer)
+        loop first retrieval per document id
+            Keyword->>Serialize: title + category + text
+            Serialize-->>Keyword: shared retrieval text
+            Keyword->>Keyword: cache normalized document terms by document id
+        end
+        Keyword-->>Main: overlap-ranked documents
+    else strategy == "embedding"
+        Main->>Embed: construct(embedding_model)
+        loop build_index(documents)
+            Embed->>Serialize: title + category + text
+            Serialize-->>Embed: shared retrieval text list
+            Embed->>ST: encode(serialized docs, normalize_embeddings=True)
+            ST-->>Embed: float32 normalized embeddings
+            Embed->>Faiss: reset index and add full embedding matrix
+            Embed->>Embed: store indexed document ids in order
+        end
+        Embed-->>Main: similarity-ranked documents
+    end
+```
+
+## Low Confidence Embedding Failure Path Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Bot as RAGChatbot<br/>ai-chat/03-rag-chat/chatbot.py
+    participant Embed as EmbeddingRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant ST as SentenceTransformer
+    participant Faiss as FAISS IndexFlatIP
+
+    Bot->>Embed: retrieve(query, documents, limit=3)
+    alt index missing or document ids changed
+        Embed->>Embed: rebuild full index from current documents
+    end
+    Embed->>ST: encode([query], normalize_embeddings=True)
+    ST-->>Embed: normalized query embedding
+    Embed->>Faiss: search(query_embedding, k)
+    Faiss-->>Embed: scores + indices
+    loop each score/index pair
+        alt index == -1 or score < min_similarity
+            Embed->>Embed: discard hit
+        else score >= min_similarity
+            Embed->>Embed: keep matched document
+        end
+    end
+    alt all hits discarded
+        Embed-->>Bot: []
+        Bot->>Bot: omit Retrieved context block
+    else one or more hits survive
+        Embed-->>Bot: filtered documents
+        Bot->>Bot: include retrieved context bullets
+    end
+```
+
+## Implementation Notes
+
+- `OPENAI_MODEL` now stays on the chat path while `EMBEDDING_MODEL` is used only when the embedding retrieval strategy is selected.
+- `serialize_document_for_retrieval()` is the single retrieval text formatter for both keyword and embedding strategies, so title and category signal are preserved consistently across both paths.
+- `KeywordRetrievalStrategy` now caches normalized document term sets by document id instead of retokenizing document text on every query.
+- `EmbeddingRetrievalStrategy.build_index()` now recreates the FAISS index on every rebuild and tracks the indexed document id order to avoid stale or duplicated vectors.
+- Embedding search uses normalized vectors with `IndexFlatIP`, then applies a `min_similarity` threshold before passing any documents into the prompt.
+
+## Executive Verdict
+
+- Retrieval correctness improved materially. The branch now fixes the chat-vs-embedding model split, prevents stale FAISS state from accumulating across rebuilds, and stops low-confidence embedding hits from being injected as supporting context.
+- Residual quality limits remain deliberate: keyword retrieval is still overlap-based rather than BM25-style, and there is still no corpus-level retrieval eval dataset.
+
+## Runtime Check
+
+- `uv run python -m py_compile ai-chat/config.py ai-chat/03-rag-chat/main.py ai-chat/03-rag-chat/retrieval.py tests/test_rag_retrieval.py tests/test_ai_chat_entrypoints.py` passed.
+- `uv run pytest tests/test_rag_retrieval.py`, `uv run pytest tests/test_ai_chat_entrypoints.py`, and `make test` were started in the sandbox but did not produce a usable completion signal before timeout/TTY limitations. The test intent is documented below; final PR notes should call out that the static compile check completed while live pytest confirmation remained inconclusive in this environment.
+
+## Scoring Scale
+
+- `Overall`, `Useful`, `Critical`, `Design`: `1` low, `5` high.
+- `Redundant`: `1` not redundant, `5` highly redundant.
+
+## Per-Test Review
+
+### Retrieval Regression Suite
+
+| Ref | De Facto Test Name | What it proves | Overall | Useful | Critical | Redundant | Design | Review |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| R1 | `test_settings_uses_separate_chat_and_embedding_models` | The runtime no longer conflates the OpenAI chat model with the Hugging Face embedding model identifier. | 5 | 5 | 5 | 1 | 4 | Directly covers the original production breakage and keeps the config contract explicit. |
+| R2 | `test_serialize_document_for_retrieval_includes_all_relevant_fields` | Shared retrieval text includes `title`, `category`, and `text` for both retrieval strategies. | 4 | 4 | 4 | 1 | 4 | Small but load-bearing because keyword and embedding retrieval now rely on the same serialization helper. |
+| R3 | `test_keyword_retrieval_uses_cached_document_terms` | Keyword retrieval reuses cached normalized term sets instead of re-tokenizing every document on repeat queries. | 4 | 4 | 3 | 1 | 4 | Good regression coverage for the performance-oriented behavior change without over-specifying ranking internals. |
+| R4 | `test_keyword_retrieval_refreshes_cache_when_document_text_changes` | Keyword retrieval invalidates cached document terms when a document keeps the same id but its serialized retrieval text changes. | 5 | 5 | 4 | 1 | 5 | Covers the load-bearing stale-cache edge case for long-lived strategy instances. |
+| R5 | `test_embedding_retrieval_indexes_shared_document_text` | Embedding indexing uses the same serialized document text as keyword retrieval, preserving title/category signal. | 5 | 5 | 4 | 1 | 4 | Important parity check between the two retrieval paths. |
+| R6 | `test_embedding_retrieval_resets_index_on_rebuild` | FAISS state is reset on rebuild so stale vectors do not survive across corpus changes. | 5 | 5 | 5 | 1 | 5 | Most critical correctness guard in the new embedding path. |
+| R7 | `test_embedding_retrieval_rebuilds_when_document_text_changes` | Embedding retrieval rebuilds when indexed documents keep the same id but their serialized retrieval text changes. | 5 | 5 | 5 | 1 | 5 | Prevents silent reuse of stale vectors when document content changes in place. |
+| R8 | `test_embedding_retrieval_returns_empty_for_low_similarity_queries` | Low-confidence embedding matches are dropped instead of being injected into the prompt as false support. | 5 | 5 | 5 | 1 | 5 | Protects the grounded-answer contract at the prompt boundary, not just internal ranking semantics. |

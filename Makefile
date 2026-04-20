@@ -15,10 +15,10 @@ test-live-happy-paths:
 	$(PYTEST) tests/e2e/test_live_happy_paths.py
 
 run-history:
-	uv run ai-chat/01-chat-app-with-history.py
+	uv run src/01-chat-app-with-history.py
 
 run-stream:
-	uv run ai-chat/02-chat-app-with-stream.py
+	uv run src/02-chat-app-with-stream.py
 
 run-rag:
-	uv run ai-chat/03-rag-chat/main.py
+	uv run src/03-rag-chat/main.py

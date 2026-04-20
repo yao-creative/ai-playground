@@ -25,12 +25,5 @@ jobs:
       - name: Sync dependencies
         run: uv sync --locked
 
-      - name: Load env from GitHub secrets
-        run: |
-          cp .env.example .env
-          sed -i "s|OPENAI_API_KEY=.*|OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}|" .env
-          sed -i "s|OPENAI_MODEL=.*|OPENAI_MODEL=${{ secrets.OPENAI_MODEL }}|" .env
-          sed -i "s|RUN_LIVE_TESTS=.*|RUN_LIVE_TESTS=${{ secrets.RUN_LIVE_TESTS }}|" .env
-
       - name: Run test-chat
         run: make test-chat

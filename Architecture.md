@@ -538,3 +538,125 @@ sequenceDiagram
 | R6 | `test_embedding_retrieval_resets_index_on_rebuild` | FAISS state is reset on rebuild so stale vectors do not survive across corpus changes. | 5 | 5 | 5 | 1 | 5 | Most critical correctness guard in the new embedding path. |
 | R7 | `test_embedding_retrieval_rebuilds_when_document_text_changes` | Embedding retrieval rebuilds when indexed documents keep the same id but their serialized retrieval text changes. | 5 | 5 | 5 | 1 | 5 | Prevents silent reuse of stale vectors when document content changes in place. |
 | R8 | `test_embedding_retrieval_returns_empty_for_low_similarity_queries` | Low-confidence embedding matches are dropped instead of being injected into the prompt as false support. | 5 | 5 | 5 | 1 | 5 | Protects the grounded-answer contract at the prompt boundary, not just internal ranking semantics. |
+
+# Edit 4 Keyword Retrieval Cache Tradeoffs 2026-04-20 14:28 Branch: feat/retrieval/embeddings
+
+## Keyword Cache Request Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Bot as RAGChatbot<br/>ai-chat/03-rag-chat/chatbot.py
+    participant Keyword as KeywordRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Serialize as serialize_document_for_retrieval<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Tokenizer as TiktokenTokenizer<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Cache as _document_terms<br/>in-memory dict
+
+    Bot->>Keyword: retrieve(query, documents, limit=3)
+    Keyword->>Tokenizer: tokenize(query)
+    loop each document
+        Keyword->>Serialize: title + category + text
+        Serialize-->>Keyword: serialized_document
+        Keyword->>Cache: get(document.id)
+        alt cached serialized text matches
+            Cache-->>Keyword: cached term set
+            Keyword->>Keyword: reuse tokenized document terms
+        else cache missing or serialized text changed
+            Cache-->>Keyword: miss or stale entry
+            Keyword->>Tokenizer: tokenize(serialized_document)
+            Tokenizer-->>Keyword: document term set
+            Keyword->>Cache: store(document.id -> (serialized_document, term_set))
+        end
+        Keyword->>Keyword: compute query/document overlap
+    end
+    Keyword-->>Bot: overlap-ranked documents
+```
+
+## Cache Value Threshold Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User traffic
+    participant App as App process
+    participant Keyword as KeywordRetrievalStrategy
+    participant CPU as CPU time
+
+    alt tiny corpus or one-off query burst
+        User->>App: 1 to few searches
+        App->>Keyword: build strategy and answer
+        Keyword->>CPU: tokenize each document once or twice
+        Note over App,CPU: cache benefit is marginal
+    else repeated queries against same in-memory corpus
+        User->>App: many searches in same process
+        App->>Keyword: reuse same strategy instance
+        Keyword->>CPU: avoid re-tokenizing unchanged documents
+        Note over App,CPU: cache benefit compounds with query volume and corpus size
+    else document corpus mutates frequently
+        User->>App: searches while documents change
+        App->>Keyword: same ids, new text
+        Keyword->>CPU: invalidate stale entries by serialized text mismatch
+        Note over App,CPU: correctness preserved, cache hit rate drops
+    end
+```
+
+## Implementation Notes
+
+- The cache solves repeated document-tokenization work, not retrieval quality. It exists to avoid recomputing the same normalized token set for unchanged documents on every query.
+- The expensive part being avoided is the repeated `tokenizer.tokenize(serialized_document)` call for every document on every request. In this toy app that cost is modest; in a larger corpus or higher-query process it becomes steady CPU overhead.
+- The fetch rule is exact-match invalidation, not a threshold:
+  - reuse cached terms when `document.id` exists in `_document_terms` and the cached serialized text equals the current serialized text
+  - recompute when the id is absent or the serialized text changed
+- The cache is process-local and in-memory only:
+  - no disk persistence
+  - no TTL
+  - no size-based eviction
+  - no cross-worker sharing
+- The practical win appears only when the same `KeywordRetrievalStrategy` instance serves multiple queries over mostly stable documents.
+
+## Production Examples
+
+- Internal policy bot with a few hundred static HR/IT/security documents and many employee questions per app process. Each question reuses the same document set, so cached document terms save repeated normalization work across every query.
+- Customer support workspace assistant where agents ask many follow-up questions against the same knowledge base during one shift. Query text changes, but most document text does not, so the cache trades a small amount of RAM for lower repeated CPU cost.
+- Multi-tenant RAG worker that keeps one corpus in memory per tenant for minutes or hours. The cache helps when each tenant has bursts of repeated searches and the worker does not rebuild state every request.
+- It matters much less for a CLI demo where a user asks one question and exits, or for a serverless handler that rebuilds the process on each request.
+
+## When You Do Not Need It
+
+- One-off scripts, notebooks, or CLIs where the process serves very few queries before exiting.
+- Very small corpora where re-tokenizing every document is operationally irrelevant and code simplicity matters more than CPU savings.
+- Systems where documents are changing so frequently that cache hits are rare and the invalidation logic buys little.
+- Architectures that already precompute or externalize lexical features elsewhere, such as a search engine or a BM25 index.
+
+## Alternative Decisions And Tradeoffs
+
+- Keep no cache:
+  - simplest implementation
+  - lowest memory usage
+  - best when corpus size and query volume are both small
+- In-memory per-process cache:
+  - cheap and simple
+  - no network hop
+  - duplicated across workers and lost on restart
+- Precomputed lexical index:
+  - better when corpus is larger and retrieval is core product behavior
+  - more upfront complexity and rebuild logic
+  - usually a better long-term choice than hand-rolled overlap scoring
+- External search backend:
+  - highest operational complexity
+  - strongest fit when you need ranking quality, filtering, facets, and multi-worker consistency
+  - overkill for tutorial-scale corpora
+
+## Design Guidance
+
+- Use the current cache when:
+  - documents are mostly stable
+  - the same process serves repeated queries
+  - you want a low-complexity optimization without adding infrastructure
+- Skip it when:
+  - the product is small enough that the repeated tokenization cost is noise
+  - readability matters more than a micro-optimization
+- Move to a real lexical index when:
+  - query volume grows
+  - corpus size grows beyond tutorial scale
+  - ranking quality becomes more important than avoiding repeated tokenization

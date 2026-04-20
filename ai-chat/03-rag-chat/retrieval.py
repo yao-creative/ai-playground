@@ -39,11 +39,20 @@ class KeywordRetrievalStrategy:
         self.tokenizer = tokenizer
         self._document_terms: dict[str, tuple[str, set[str]]] = {}
 
-    def _tokenize_document(self, document: Document) -> set[str]:
-        serialized_document = serialize_document_for_retrieval(document)
-        cached_entry = self._document_terms.get(document.id)
+    def _get_cached_document_terms(
+        self, document_id: str, serialized_document: str
+    ) -> set[str] | None:
+        """Return cached terms only when the serialized document still matches."""
+        cached_entry = self._document_terms.get(document_id)
         if cached_entry is not None and cached_entry[0] == serialized_document:
             return cached_entry[1]
+        return None
+
+    def _tokenize_document(self, document: Document) -> set[str]:
+        serialized_document = serialize_document_for_retrieval(document)
+        cached_terms = self._get_cached_document_terms(document.id, serialized_document)
+        if cached_terms is not None:
+            return cached_terms
 
         doc_terms = self.tokenizer.tokenize(serialized_document)
         self._document_terms[document.id] = (serialized_document, doc_terms)

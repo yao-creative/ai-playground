@@ -319,11 +319,11 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant User as User Terminal Input
-    participant App as TerminalChatApp<br/>ai-chat/03-rag-chat/terminal_app.py
-    participant Bot as RAGChatbot<br/>ai-chat/03-rag-chat/chatbot.py
-    participant Retrieve as KeywordRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
-    participant Tokenizer as TiktokenTokenizer<br/>ai-chat/03-rag-chat/retrieval.py
-    participant Corpus as Document Corpus<br/>ai-chat/03-rag-chat/data.py
+    participant App as TerminalChatApp<br/>src/03-rag-chat/terminal_app.py
+    participant Bot as RAGChatbot<br/>src/03-rag-chat/chatbot.py
+    participant Retrieve as KeywordRetrievalStrategy<br/>src/03-rag-chat/retrieval.py
+    participant Tokenizer as TiktokenTokenizer<br/>src/03-rag-chat/retrieval.py
+    participant Corpus as Document Corpus<br/>src/03-rag-chat/data.py
     participant OpenAI as OpenAI Responses API
 
     User->>App: Enter question in terminal
@@ -435,11 +435,11 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Main as build_app<br/>ai-chat/03-rag-chat/main.py
-    participant Settings as Settings.load<br/>ai-chat/config.py
-    participant Keyword as KeywordRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
-    participant Embed as EmbeddingRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
-    participant Serialize as serialize_document_for_retrieval<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Main as build_app<br/>src/03-rag-chat/main.py
+    participant Settings as Settings.load<br/>src/config.py
+    participant Keyword as KeywordRetrievalStrategy<br/>src/03-rag-chat/retrieval.py
+    participant Embed as EmbeddingRetrievalStrategy<br/>src/03-rag-chat/retrieval.py
+    participant Serialize as serialize_document_for_retrieval<br/>src/03-rag-chat/retrieval.py
     participant ST as SentenceTransformer
     participant Faiss as FAISS IndexFlatIP
 
@@ -472,8 +472,8 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Bot as RAGChatbot<br/>ai-chat/03-rag-chat/chatbot.py
-    participant Embed as EmbeddingRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Bot as RAGChatbot<br/>src/03-rag-chat/chatbot.py
+    participant Embed as EmbeddingRetrievalStrategy<br/>src/03-rag-chat/retrieval.py
     participant ST as SentenceTransformer
     participant Faiss as FAISS IndexFlatIP
 
@@ -516,7 +516,7 @@ sequenceDiagram
 
 ## Runtime Check
 
-- `uv run python -m py_compile ai-chat/config.py ai-chat/03-rag-chat/main.py ai-chat/03-rag-chat/retrieval.py tests/test_rag_retrieval.py tests/test_ai_chat_entrypoints.py` passed.
+- `uv run python -m py_compile src/config.py src/03-rag-chat/main.py src/03-rag-chat/retrieval.py tests/test_rag_retrieval.py tests/test_ai_chat_entrypoints.py` passed.
 - `uv run pytest tests/test_rag_retrieval.py`, `uv run pytest tests/test_ai_chat_entrypoints.py`, and `make test` were started in the sandbox but did not produce a usable completion signal before timeout/TTY limitations. The test intent is documented below; final PR notes should call out that the static compile check completed while live pytest confirmation remained inconclusive in this environment.
 
 ## Scoring Scale
@@ -546,10 +546,10 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Bot as RAGChatbot<br/>ai-chat/03-rag-chat/chatbot.py
-    participant Keyword as KeywordRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
-    participant Serialize as serialize_document_for_retrieval<br/>ai-chat/03-rag-chat/retrieval.py
-    participant Tokenizer as TiktokenTokenizer<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Bot as RAGChatbot<br/>src/03-rag-chat/chatbot.py
+    participant Keyword as KeywordRetrievalStrategy<br/>src/03-rag-chat/retrieval.py
+    participant Serialize as serialize_document_for_retrieval<br/>src/03-rag-chat/retrieval.py
+    participant Tokenizer as TiktokenTokenizer<br/>src/03-rag-chat/retrieval.py
     participant Cache as _document_terms<br/>in-memory dict
 
     Bot->>Keyword: retrieve(query, documents, limit=3)

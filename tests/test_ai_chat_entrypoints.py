@@ -7,9 +7,9 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATHS = [
-    REPO_ROOT / "ai-chat" / "01-chat-app-with-history.py",
-    REPO_ROOT / "ai-chat" / "02-chat-app-with-stream.py",
-    REPO_ROOT / "ai-chat" / "03-rag-chat" / "main.py",
+    REPO_ROOT / "src" / "01-chat-app-with-history.py",
+    REPO_ROOT / "src" / "02-chat-app-with-stream.py",
+    REPO_ROOT / "src" / "03-rag-chat" / "main.py",
 ]
 
 

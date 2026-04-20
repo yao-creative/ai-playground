@@ -31,7 +31,7 @@ def get_ai_response(user_input, chat_history=None):
     chat_history = chat_history or []
     prompt = build_prompt(user_input, chat_history)
     response = client.responses.create(
-        model=settings.model,
+        model=settings.chat_model,
         input=prompt,
     )
     return response.output_text.strip()

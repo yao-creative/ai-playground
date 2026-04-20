@@ -33,7 +33,7 @@ async def get_ai_response_stream(user_input, chat_history=None):
     chat_history = chat_history or []
     prompt = build_prompt(user_input, chat_history)
     response = await async_client.responses.create(
-        model=settings.model,
+        model=settings.chat_model,
         input=prompt,
         stream=True,
     )

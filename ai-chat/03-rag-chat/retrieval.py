@@ -2,9 +2,6 @@ import tiktoken
 
 from domain import Document, Tokenizer
 
-from sentence_transformers import SentenceTransformer
-import faiss
-
 
 def serialize_document_for_retrieval(document: Document) -> str:
     return " ".join((document.title, document.category, document.text))
@@ -76,6 +73,10 @@ class KeywordRetrievalStrategy:
 
 class EmbeddingRetrievalStrategy:
     def __init__(self, model: str, min_similarity: float = 0.3) -> None:
+        # Delay heavyweight ML imports until the embedding strategy is selected.
+        from sentence_transformers import SentenceTransformer
+        import faiss
+
         self.model = SentenceTransformer(model)
         self.dimension = self.model.get_sentence_embedding_dimension()
         self.index = faiss.IndexFlatIP(self.dimension)

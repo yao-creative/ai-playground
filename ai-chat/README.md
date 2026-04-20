@@ -70,6 +70,28 @@ Run the smoke tests:
 make test
 ```
 
+Run the opt-in live happy-path e2e suite:
+
+```bash
+RUN_LIVE_TESTS=1 make test-live-happy-paths
+```
+
+Live happy-path tests reuse the normal app config from `.env`:
+
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `EMBEDDING_MODEL`
+- `RUN_LIVE_TESTS=1`
+
+The suite sends one real message through:
+
+- `01-chat-app-with-history.py`
+- `02-chat-app-with-stream.py`
+- `03-rag-chat/main.py --strategy keyword`
+- `03-rag-chat/main.py --strategy embedding`
+
+It asserts startup, a non-empty assistant response, and clean exit. It is intentionally opt-in because it can incur OpenAI usage and may also trigger embedding-model download/setup in the embedding RAG path.
+
 ## How to use this playground
 
 Think of the three scripts as a progression:

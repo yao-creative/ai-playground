@@ -14,21 +14,21 @@ LIVE_CASES = [
         "history",
         lambda repo_root: [
             sys.executable,
-            str(repo_root / "ai-chat" / "01-chat-app-with-history.py"),
+            str(repo_root / "src" / "01-chat-app-with-history.py"),
         ],
     ),
     (
         "stream",
         lambda repo_root: [
             sys.executable,
-            str(repo_root / "ai-chat" / "02-chat-app-with-stream.py"),
+            str(repo_root / "src" / "02-chat-app-with-stream.py"),
         ],
     ),
     (
         "rag-keyword",
         lambda repo_root: [
             sys.executable,
-            str(repo_root / "ai-chat" / "03-rag-chat" / "main.py"),
+            str(repo_root / "src" / "03-rag-chat" / "main.py"),
             "--strategy",
             "keyword",
         ],
@@ -37,7 +37,7 @@ LIVE_CASES = [
         "rag-embedding",
         lambda repo_root: [
             sys.executable,
-            str(repo_root / "ai-chat" / "03-rag-chat" / "main.py"),
+            str(repo_root / "src" / "03-rag-chat" / "main.py"),
             "--strategy",
             "embedding",
         ],

@@ -1,7 +1,7 @@
 [project]
 name = "agents-playground"
 version = "0.1.0"
-description = "Local notebook experiments for ai-chat"
+description = "Local notebook experiments for src"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "datasets>=4.8.4",

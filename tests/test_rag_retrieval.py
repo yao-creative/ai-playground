@@ -5,7 +5,7 @@ import numpy as np
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-AI_CHAT_DIR = REPO_ROOT / "ai-chat"
+AI_CHAT_DIR = REPO_ROOT / "src"
 RAG_CHAT_DIR = AI_CHAT_DIR / "03-rag-chat"
 
 for path in (AI_CHAT_DIR, RAG_CHAT_DIR):

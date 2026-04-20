@@ -110,7 +110,7 @@ make run-rag
 To run the RAG app with embedding retrieval explicitly:
 
 ```bash
-uv run ai-chat/03-rag-chat/main.py --strategy embedding
+uv run src/03-rag-chat/main.py --strategy embedding
 ```
 
 ### 4. Run tests
@@ -267,9 +267,9 @@ If you want a concrete sequence, this is a sensible order:
 - `evals/qa.jsonl` for curated test cases
 - `tests/test_rag_retrieval.py` for retrieval behavior
 - `tests/test_rag_grounding.py` for grounding assertions
-- `ai-chat/03-rag-chat/evals.py` for offline evaluation runs
-- `ai-chat/03-rag-chat/tracing.py` for prompt and retrieval logs
-- `ai-chat/03-rag-chat/embeddings_retrieval.py` for A/B comparison
+- `src/03-rag-chat/evals.py` for offline evaluation runs
+- `src/03-rag-chat/tracing.py` for prompt and retrieval logs
+- `src/03-rag-chat/embeddings_retrieval.py` for A/B comparison
 
 ## Design principle
 

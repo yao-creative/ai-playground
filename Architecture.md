@@ -660,3 +660,126 @@ sequenceDiagram
   - query volume grows
   - corpus size grows beyond tutorial scale
   - ranking quality becomes more important than avoiding repeated tokenization
+
+# Edit 5 Hybrid BM25 Retrieval 2026-04-20 16:45 Branch: feat/retrieval/hybrid
+
+## Hybrid Retrieval Request Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User Terminal Input
+    participant App as TerminalChatApp<br/>ai-chat/03-rag-chat/terminal_app.py
+    participant Bot as RAGChatbot<br/>ai-chat/03-rag-chat/chatbot.py
+    participant Hybrid as HybridRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant BM25 as BM25RetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Dense as EmbeddingRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant CE as CrossEncoderReranker<br/>ai-chat/03-rag-chat/retrieval.py
+    participant OpenAI as OpenAI Responses API
+
+    User->>App: Enter question in terminal
+    App->>Bot: stream_chat_response(user_text, chat_history)
+    Bot->>Hybrid: retrieve(user_input, self.documents, limit=3)
+    par lexical recall
+        Hybrid->>BM25: retrieve(query, documents, candidate_k)
+        BM25->>BM25: tokenize serialized docs with tiktoken-normalized splitter
+        BM25->>BM25: rebuild BM25 index if document snapshot changed
+        BM25-->>Hybrid: ranked lexical candidates
+    and semantic recall
+        Hybrid->>Dense: retrieve(query, documents, candidate_k)
+        Dense->>Dense: rebuild FAISS index if document snapshot changed
+        Dense-->>Hybrid: ranked dense candidates
+    end
+    Hybrid->>Hybrid: reciprocal-rank-fuse candidate lists by document id
+    Hybrid->>CE: rerank(query, fused_candidates, limit)
+    CE-->>Hybrid: top reranked documents
+    Hybrid-->>Bot: final top documents
+    Bot->>Bot: append Retrieved context bullets
+    Bot->>OpenAI: responses.create(model, input=prompt, stream=True)
+    OpenAI-->>App: streamed output deltas
+    App-->>User: print response
+```
+
+## Reranker Failure Path Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Bot as RAGChatbot
+    participant Hybrid as HybridRetrievalStrategy
+    participant BM25 as BM25RetrievalStrategy
+    participant Dense as EmbeddingRetrievalStrategy
+    participant CE as CrossEncoderReranker
+
+    Bot->>Hybrid: retrieve(query, documents, limit=3)
+    Hybrid->>BM25: lexical candidates
+    Hybrid->>Dense: dense candidates
+    Hybrid->>Hybrid: reciprocal-rank fusion
+    Hybrid->>CE: rerank(query, fused_candidates, limit)
+    alt reranker returns scores
+        CE-->>Hybrid: reranked top documents
+        Hybrid-->>Bot: reranked documents
+    else reranker raises or is unavailable
+        CE-->>Hybrid: exception
+        Hybrid->>Hybrid: keep fused pre-rerank order
+        Hybrid-->>Bot: fallback documents
+    end
+```
+
+## Keyword vs BM25 Decision Matrix
+
+| Dimension | Keyword Overlap | BM25 |
+| --- | --- | --- |
+| Ranking signal | Unique-term overlap only | Term frequency, inverse document frequency, and document-length normalization |
+| Tokenization source | Shared tiktoken normalization | Same shared tiktoken normalization via custom `bm25s` splitter |
+| Query/document cache | In-memory term-set cache | Full lexical index rebuild when serialized corpus changes |
+| Repeated-word sensitivity | Repeated words do not help rank | Repeated informative terms can improve rank |
+| Small-corpus simplicity | Simplest baseline | Slightly heavier but still local and dependency-light |
+| Best role in this tutorial | Baseline and teaching reference | Real lexical retriever for hybrid recall |
+
+## Implementation Notes
+
+- `main.py` now supports `keyword`, `bm25`, `embedding`, and `hybrid` while keeping `keyword` as the default CLI path.
+- `config.py` now loads `RERANKER_MODEL`, defaulting to `cross-encoder/ms-marco-MiniLM-L6-v2`.
+- `retrieval.py` now shares one retrieval serialization function across keyword, BM25, dense retrieval, and reranking so title/category signal stays aligned.
+- `TiktokenTokenizer` now exposes both:
+  - a unique-token set for the legacy keyword strategy
+  - an ordered token sequence for BM25 indexing and querying
+- `BM25RetrievalStrategy` uses `bm25s` with a custom splitter backed by the same tiktoken normalization rules used by the keyword baseline.
+- `EmbeddingRetrievalStrategy` keeps the existing sentence-transformer embedding model and FAISS cosine-similarity search semantics.
+- `HybridRetrievalStrategy` fuses BM25 and dense candidate lists with reciprocal rank fusion before final cross-encoder reranking.
+- The reranker failure policy is fail-open. If local reranking raises, the app still answers using fused pre-rerank candidates instead of aborting the turn.
+- `cross-encoder/ms-marco-MiniLM-L6-v2` was chosen as the default local reranker because it is small, widely used, and integrates directly through `sentence_transformers.CrossEncoder`.
+
+## Executive Verdict
+
+- Retrieval quality now has a real progression:
+  - `keyword` remains the simplest lexical baseline
+  - `bm25` provides a stronger local lexical retriever
+  - `embedding` preserves dense-only comparison
+  - `hybrid` is the highest-quality path because it combines recall from BM25 and dense search, then sharpens final precision with reranking
+- The main tradeoff is local complexity and runtime cost. Hybrid retrieval adds a BM25 index, a dense index, and a cross-encoder scoring pass, which is justified for comparison/tutorial value but would be unnecessary for the smallest baseline path.
+
+## Runtime Check
+
+- `uv add bm25s` completed successfully and updated the project dependency set.
+- `uv run python -m py_compile ai-chat/config.py ai-chat/03-rag-chat/main.py ai-chat/03-rag-chat/retrieval.py tests/test_rag_retrieval.py tests/test_ai_chat_entrypoints.py` passed.
+- `uv run pytest ...` did not produce a usable completion signal in this environment, so verification was completed with direct Python harness execution of the retrieval assertions and the entrypoint subprocess checks instead.
+
+## Scoring Scale
+
+- `Overall`, `Useful`, `Critical`, `Design`: `1` low, `5` high.
+- `Redundant`: `1` not redundant, `5` highly redundant.
+
+## Per-Test Review
+
+### Retrieval Regression Suite
+
+| Ref | De Facto Test Name | What it proves | Overall | Useful | Critical | Redundant | Design | Review |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| H1 | `test_tiktoken_tokenizer_returns_bm25_sequence_tokens` | BM25 uses the same tiktoken-driven normalization family as the keyword baseline while preserving repeated token order. | 4 | 4 | 4 | 1 | 4 | Important contract test because tokenizer drift would quietly invalidate the keyword-vs-BM25 comparison. |
+| H2 | `test_bm25_retrieval_indexes_shared_document_text` | BM25 indexes the same serialized retrieval text used everywhere else. | 5 | 5 | 4 | 1 | 4 | High-signal parity check across lexical, dense, and rerank layers. |
+| H3 | `test_bm25_retrieval_rebuilds_when_document_text_changes` | BM25 does not reuse stale lexical state across corpus mutations. | 5 | 5 | 5 | 1 | 5 | Load-bearing because the BM25 tokenizer vocabulary and index must stay aligned. |
+| H4 | `test_hybrid_retrieval_reranks_fused_candidates_with_cross_encoder` | Final hybrid ordering is controlled by the reranker rather than whichever first-stage retriever happened to rank a candidate earlier. | 5 | 5 | 5 | 1 | 5 | Core proof that the new architecture is actually rerank-first at the final selection boundary. |
+| H5 | `test_hybrid_retrieval_falls_back_to_fused_order_when_reranker_raises` | Hybrid retrieval continues serving grounded context when local reranking fails. | 5 | 5 | 5 | 1 | 5 | Covers the chosen fail-open production behavior directly. |
+| H6 | `test_build_app_supports_bm25_and_hybrid` | `main.py` wires the new strategies and eager index builds correctly at the composition root. | 4 | 4 | 4 | 1 | 4 | Good integration guard for the CLI surface without forcing real model downloads in test. |

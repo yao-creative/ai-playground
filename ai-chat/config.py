@@ -10,6 +10,7 @@ class Settings:
     api_key: str
     chat_model: str
     embedding_model: str
+    reranker_model: str
 
     @classmethod
     def load(cls) -> "Settings":
@@ -20,6 +21,9 @@ class Settings:
         chat_model = os.getenv("OPENAI_MODEL")
         embedding_model = os.getenv(
             "EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+        )
+        reranker_model = os.getenv(
+            "RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L6-v2"
         )
 
         if not api_key:
@@ -32,6 +36,7 @@ class Settings:
             api_key=api_key,
             chat_model=chat_model,
             embedding_model=embedding_model,
+            reranker_model=reranker_model,
         )
 
 

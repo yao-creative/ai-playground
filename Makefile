@@ -1,7 +1,7 @@
 PYTHON := uv run python
 PYTEST := uv run pytest
 
-.PHONY: test test-chat test-rag run-history run-stream run-rag
+.PHONY: test test-chat test-rag test-live-happy-paths run-history run-stream run-rag
 
 test: test-chat test-rag
 
@@ -10,6 +10,9 @@ test-chat:
 
 test-rag:
 	$(PYTEST) tests/test_rag_retrieval.py
+
+test-live-happy-paths:
+	$(PYTEST) tests/e2e/test_live_happy_paths.py
 
 run-history:
 	uv run ai-chat/01-chat-app-with-history.py

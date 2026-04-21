@@ -660,3 +660,436 @@ sequenceDiagram
   - query volume grows
   - corpus size grows beyond tutorial scale
   - ranking quality becomes more important than avoiding repeated tokenization
+
+# Edit 5 Hybrid BM25 Retrieval 2026-04-20 16:45 Branch: feat/retrieval/hybrid
+
+## Hybrid Retrieval Request Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User Terminal Input
+    participant App as TerminalChatApp<br/>ai-chat/03-rag-chat/terminal_app.py
+    participant Bot as RAGChatbot<br/>ai-chat/03-rag-chat/chatbot.py
+    participant Hybrid as HybridRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant BM25 as BM25RetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant Dense as EmbeddingRetrievalStrategy<br/>ai-chat/03-rag-chat/retrieval.py
+    participant CE as CrossEncoderReranker<br/>ai-chat/03-rag-chat/retrieval.py
+    participant OpenAI as OpenAI Responses API
+
+    User->>App: Enter question in terminal
+    App->>Bot: stream_chat_response(user_text, chat_history)
+    Bot->>Hybrid: retrieve(user_input, self.documents, limit=3)
+    par lexical recall
+        Hybrid->>BM25: retrieve(query, documents, candidate_k)
+        BM25->>BM25: tokenize serialized docs with tiktoken-normalized splitter
+        BM25->>BM25: rebuild BM25 index if document snapshot changed
+        BM25-->>Hybrid: ranked lexical candidates
+    and semantic recall
+        Hybrid->>Dense: retrieve(query, documents, candidate_k)
+        Dense->>Dense: rebuild FAISS index if document snapshot changed
+        Dense-->>Hybrid: ranked dense candidates
+    end
+    Hybrid->>Hybrid: reciprocal-rank-fuse candidate lists by document id
+    Hybrid->>CE: rerank(query, fused_candidates, limit)
+    CE-->>Hybrid: top reranked documents
+    Hybrid-->>Bot: final top documents
+    Bot->>Bot: append Retrieved context bullets
+    Bot->>OpenAI: responses.create(model, input=prompt, stream=True)
+    OpenAI-->>App: streamed output deltas
+    App-->>User: print response
+```
+
+## Reranker Failure Path Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Bot as RAGChatbot
+    participant Hybrid as HybridRetrievalStrategy
+    participant BM25 as BM25RetrievalStrategy
+    participant Dense as EmbeddingRetrievalStrategy
+    participant CE as CrossEncoderReranker
+
+    Bot->>Hybrid: retrieve(query, documents, limit=3)
+    Hybrid->>BM25: lexical candidates
+    Hybrid->>Dense: dense candidates
+    Hybrid->>Hybrid: reciprocal-rank fusion
+    Hybrid->>CE: rerank(query, fused_candidates, limit)
+    alt reranker returns scores
+        CE-->>Hybrid: reranked top documents
+        Hybrid-->>Bot: reranked documents
+    else reranker raises or is unavailable
+        CE-->>Hybrid: exception
+        Hybrid->>Hybrid: keep fused pre-rerank order
+        Hybrid-->>Bot: fallback documents
+    end
+```
+
+## Keyword vs BM25 Decision Matrix
+
+| Dimension | Keyword Overlap | BM25 |
+| --- | --- | --- |
+| Ranking signal | Unique-term overlap only | Term frequency, inverse document frequency, and document-length normalization |
+| Tokenization source | Shared tiktoken normalization | Same shared tiktoken normalization via custom `bm25s` splitter |
+| Query/document cache | In-memory term-set cache | Full lexical index rebuild when serialized corpus changes |
+| Repeated-word sensitivity | Repeated words do not help rank | Repeated informative terms can improve rank |
+| Small-corpus simplicity | Simplest baseline | Slightly heavier but still local and dependency-light |
+| Best role in this tutorial | Baseline and teaching reference | Real lexical retriever for hybrid recall |
+
+## Implementation Notes
+
+- `main.py` now supports `keyword`, `bm25`, `embedding`, and `hybrid` while keeping `keyword` as the default CLI path.
+- `config.py` now loads `RERANKER_MODEL`, defaulting to `cross-encoder/ms-marco-MiniLM-L6-v2`.
+- `retrieval.py` now shares one retrieval serialization function across keyword, BM25, dense retrieval, and reranking so title/category signal stays aligned.
+- `TiktokenTokenizer` now exposes both:
+  - a unique-token set for the legacy keyword strategy
+  - an ordered token sequence for BM25 indexing and querying
+- `BM25RetrievalStrategy` uses `bm25s` with a custom splitter backed by the same tiktoken normalization rules used by the keyword baseline.
+- `EmbeddingRetrievalStrategy` keeps the existing sentence-transformer embedding model and FAISS cosine-similarity search semantics.
+- `HybridRetrievalStrategy` fuses BM25 and dense candidate lists with reciprocal rank fusion before final cross-encoder reranking.
+- The reranker failure policy is fail-open. If local reranking raises, the app still answers using fused pre-rerank candidates instead of aborting the turn.
+- `cross-encoder/ms-marco-MiniLM-L6-v2` was chosen as the default local reranker because it is small, widely used, and integrates directly through `sentence_transformers.CrossEncoder`.
+
+## Executive Verdict
+
+- Retrieval quality now has a real progression:
+  - `keyword` remains the simplest lexical baseline
+  - `bm25` provides a stronger local lexical retriever
+  - `embedding` preserves dense-only comparison
+  - `hybrid` is the highest-quality path because it combines recall from BM25 and dense search, then sharpens final precision with reranking
+- The main tradeoff is local complexity and runtime cost. Hybrid retrieval adds a BM25 index, a dense index, and a cross-encoder scoring pass, which is justified for comparison/tutorial value but would be unnecessary for the smallest baseline path.
+
+## Runtime Check
+
+- `uv add bm25s` completed successfully and updated the project dependency set.
+- `uv run python -m py_compile ai-chat/config.py ai-chat/03-rag-chat/main.py ai-chat/03-rag-chat/retrieval.py tests/test_rag_retrieval.py tests/test_ai_chat_entrypoints.py` passed.
+- `uv run pytest ...` did not produce a usable completion signal in this environment, so verification was completed with direct Python harness execution of the retrieval assertions and the entrypoint subprocess checks instead.
+
+## Scoring Scale
+
+- `Overall`, `Useful`, `Critical`, `Design`: `1` low, `5` high.
+- `Redundant`: `1` not redundant, `5` highly redundant.
+
+## Per-Test Review
+
+### Retrieval Regression Suite
+
+| Ref | De Facto Test Name | What it proves | Overall | Useful | Critical | Redundant | Design | Review |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| H1 | `test_tiktoken_tokenizer_returns_bm25_sequence_tokens` | BM25 uses the same tiktoken-driven normalization family as the keyword baseline while preserving repeated token order. | 4 | 4 | 4 | 1 | 4 | Important contract test because tokenizer drift would quietly invalidate the keyword-vs-BM25 comparison. |
+| H2 | `test_bm25_retrieval_indexes_shared_document_text` | BM25 indexes the same serialized retrieval text used everywhere else. | 5 | 5 | 4 | 1 | 4 | High-signal parity check across lexical, dense, and rerank layers. |
+| H3 | `test_bm25_retrieval_rebuilds_when_document_text_changes` | BM25 does not reuse stale lexical state across corpus mutations. | 5 | 5 | 5 | 1 | 5 | Load-bearing because the BM25 tokenizer vocabulary and index must stay aligned. |
+| H4 | `test_hybrid_retrieval_reranks_fused_candidates_with_cross_encoder` | Final hybrid ordering is controlled by the reranker rather than whichever first-stage retriever happened to rank a candidate earlier. | 5 | 5 | 5 | 1 | 5 | Core proof that the new architecture is actually rerank-first at the final selection boundary. |
+| H5 | `test_hybrid_retrieval_falls_back_to_fused_order_when_reranker_raises` | Hybrid retrieval continues serving grounded context when local reranking fails. | 5 | 5 | 5 | 1 | 5 | Covers the chosen fail-open production behavior directly. |
+| H6 | `test_build_app_supports_bm25_and_hybrid` | `main.py` wires the new strategies and eager index builds correctly at the composition root. | 4 | 4 | 4 | 1 | 4 | Good integration guard for the CLI surface without forcing real model downloads in test. |
+
+# Edit 2 Retrieval Performance Bottlenecks 2026-04-21 10:31 Branch: feat/retrieval/hybrid
+
+## Retrieval Hot Path Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Terminal as Terminal UI
+    participant Chatbot as RAGChatbot<br/>src/03-rag-chat/chatbot.py
+    participant Hybrid as HybridRetrievalStrategy<br/>src/03-rag-chat/retrieval.py
+    participant BM25 as BM25RetrievalStrategy
+    participant Dense as EmbeddingRetrievalStrategy
+    participant Reranker as CrossEncoderReranker
+    participant OpenAI as OpenAI Responses API
+
+    Terminal->>Chatbot: user_input
+    Chatbot->>Hybrid: retrieve(query, documents)
+    Hybrid->>BM25: lexical retrieve(query)
+    BM25-->>Hybrid: candidate docs
+    Hybrid->>Dense: dense retrieve(query)
+    Dense->>Dense: encode query with SentenceTransformer
+    Dense->>Dense: search FAISS index
+    Dense-->>Hybrid: candidate docs
+    Hybrid->>Hybrid: reciprocal rank fusion
+    Hybrid->>Reranker: predict(query, fused_candidates)
+    Reranker-->>Hybrid: reranked docs
+    Hybrid-->>Chatbot: top documents
+    Chatbot->>OpenAI: responses.create(stream=True)
+    OpenAI-->>Terminal: streamed answer tokens
+```
+
+## Bottleneck Path Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UserTurn as Single User Turn
+    participant PromptBuild as build_prompt()
+    participant LocalCPU as Local CPU / Torch Runtime
+    participant DenseModel as SentenceTransformer
+    participant CrossEncoder as CrossEncoder
+
+    UserTurn->>PromptBuild: Start prompt construction
+    PromptBuild->>DenseModel: Encode query embedding
+    DenseModel->>LocalCPU: Transformer forward pass
+    LocalCPU-->>PromptBuild: query vector
+    PromptBuild->>CrossEncoder: Score fused candidates
+    CrossEncoder->>LocalCPU: Pairwise rerank forward pass
+    LocalCPU-->>PromptBuild: reranked results
+    Note over PromptBuild,LocalCPU: Retrieval is synchronous here, so local model latency blocks the turn before streaming starts
+```
+
+## Implementation Notes
+
+- The app is only network-async for the OpenAI response stream. Retrieval still runs synchronously inside `RAGChatbot.build_prompt()` before `responses.create(...)` is called.
+- `main.py` already performs the highest-value startup optimization for the current architecture: BM25 and FAISS indexes are built eagerly for `bm25`, `embedding`, and `hybrid`.
+- For the current `hybrid` path, the dominant per-query costs are local model inference, not FAISS search:
+  - `EmbeddingRetrievalStrategy.retrieve()` encodes the query on every turn.
+  - `CrossEncoderReranker.rerank()` scores every fused candidate pair on every turn.
+- `faiss.IndexFlatIP` is exact brute-force inner-product search. It is simple and correct for a small in-memory corpus, but it does not change the fact that embedding generation is the heavier step.
+- The code recomputes serialized document snapshots repeatedly to detect corpus changes. That is not the top bottleneck today, but it becomes wasted work as document count grows.
+
+## Key Bottlenecks
+
+- `src/03-rag-chat/chatbot.py`: prompt construction blocks on retrieval before any token can stream to the terminal.
+- `src/03-rag-chat/retrieval.py`: `SentenceTransformer.encode(...)` for the query is the primary dense-retrieval hot path cost.
+- `src/03-rag-chat/retrieval.py`: `CrossEncoder.predict(...)` is the most expensive step in the hybrid path and usually the first place to cut latency.
+- `src/03-rag-chat/retrieval.py`: repeated `_serialize_documents(documents)` calls add avoidable Python overhead and duplicate change-detection work.
+- `src/03-rag-chat/retrieval.py`: `IndexFlatIP` scales linearly with corpus size, so approximate FAISS indexes matter only after the corpus is much larger than the current tutorial dataset.
+
+## CPU-Bound Vs GPU-Accelerated Work
+
+- GPU-accelerated:
+  - `EmbeddingRetrievalStrategy.build_index()` during `SentenceTransformer.encode(...)` over the full corpus.
+  - `EmbeddingRetrievalStrategy.retrieve()` during query embedding generation.
+  - `CrossEncoderReranker.rerank()` during pairwise reranker inference.
+- Why these benefit from GPU:
+  - Both the bi-encoder and the cross-encoder are transformer forward passes with large dense matrix multiplications.
+  - Those tensor operations parallelize well on GPU and are usually the dominant numeric workload in the current retrieval stack.
+- Usually CPU-bound in the current code:
+  - `TiktokenTokenizer` normalization and token cleanup.
+  - BM25 tokenization and lexical retrieval.
+  - Python-side document serialization, cache comparison, reciprocal rank fusion, sorting, and prompt assembly.
+  - Small FAISS exact search on a tiny in-memory corpus.
+- Why these stay CPU-bound:
+  - They are mostly Python string processing, control flow, light numeric work, or small-data index operations.
+  - Their latency is driven more by interpreter overhead and memory access than by large tensor math.
+- Conditionally GPU-accelerated:
+  - FAISS can use GPU indexes, but that only becomes meaningful when vector search itself is the bottleneck.
+  - For this tutorial corpus, vector search is too small for GPU FAISS to matter much; query embedding and reranking dominate first.
+
+## Hardware Guidance
+
+- If a GPU is available, put `SentenceTransformer(model)` and `CrossEncoder(model)` on GPU first.
+  - That accelerates the most expensive per-turn steps without changing retrieval behavior.
+- If no GPU is available, optimize for CPU inference instead.
+  - ONNX or OpenVINO backends and quantized CPU models are the highest-value path.
+- Do not expect GPU to materially speed up BM25, token cleanup, prompt construction, or Python bookkeeping.
+  - Those stages are not large batched tensor workloads.
+- Consider GPU FAISS only after the corpus grows enough that nearest-neighbor search time is visible relative to embedding generation.
+  - Right now, the app is model-inference-bound, not vector-search-bound.
+
+## Complexity Analysis By Layer
+
+- Notation:
+  - `N`: number of documents
+  - `S`: average serialized document size
+  - `q`: query token count
+  - `d`: embedding dimension
+  - `m`: rerank candidate count
+  - `k`: returned top-k
+
+### `TiktokenTokenizer`
+
+- Runtime shape:
+  - `tokenize_to_sequence(text)`: roughly linear in input token count
+  - `tokenize(text)`: same tokenization cost plus set construction
+- Why:
+  - The implementation decodes token ids one by one, normalizes strings, filters characters, and appends Python strings.
+- Bound:
+  - CPU-bound.
+- Main cost drivers:
+  - Python loops
+  - per-token decode
+  - string cleanup and allocation
+
+### `KeywordRetrievalStrategy`
+
+- Runtime shape:
+  - warm path: query tokenization plus a linear scan over documents with set-intersection scoring
+  - cold path: includes document tokenization on cache miss
+- Approximate cost:
+  - warm path: `O(q) + O(N * set-intersection)`
+  - cold path: closer to `O(q) + O(N * S)`
+- Bound:
+  - CPU-bound.
+- Why:
+  - Document scoring is local Python set logic with no tensor acceleration path.
+
+### `BM25RetrievalStrategy.build_index()`
+
+- Runtime shape:
+  - serialize the corpus
+  - tokenize the corpus
+  - build BM25 postings/statistics
+- Approximate cost:
+  - roughly linear in total corpus token count
+- Bound:
+  - CPU-bound.
+- Why:
+  - The expensive work is text processing and lexical index construction, not dense numeric compute.
+
+### `BM25RetrievalStrategy.retrieve()`
+
+- Runtime shape:
+  - serialize documents again for change detection
+  - compare current corpus snapshot against indexed snapshot
+  - tokenize the query
+  - run BM25 retrieval
+- Approximate cost:
+  - `O(N * S)` for corpus snapshot rebuild and comparison
+  - plus lexical retrieval cost over postings
+- Bound:
+  - CPU-bound.
+- Why:
+  - The algorithm is dominated by Python/object work plus lexical matching.
+- Important note:
+  - In the current implementation, repeated `_serialize_documents(documents)` calls are a visible source of avoidable CPU work even before BM25 retrieval itself becomes expensive.
+
+### `EmbeddingRetrievalStrategy.build_index()`
+
+- Runtime shape:
+  - serialize documents
+  - embed all documents once
+  - add vectors to FAISS
+- Approximate cost:
+  - `O(N * S)` for serialization
+  - plus corpus embedding inference
+  - plus roughly `O(N * d)` to add vectors
+- Bound:
+  - mixed:
+    - serialization is CPU-bound
+    - model inference is GPU-accelerated if available, otherwise CPU-bound
+    - FAISS add is usually light compared with embedding inference for the current corpus
+- Why:
+  - Corpus embedding is transformer forward-pass work and is the main accelerator target.
+
+### `EmbeddingRetrievalStrategy.retrieve()`
+
+- Runtime shape:
+  - rebuild serialized corpus snapshot
+  - compare current and cached snapshots
+  - encode the query once
+  - search `IndexFlatIP`
+  - filter the top results
+- Approximate cost:
+  - `O(N * S)` for snapshot rebuild and comparison
+  - plus one query embedding pass
+  - plus exact vector search of roughly `O(N * d)`
+  - plus `O(k)` filtering
+- Bound:
+  - mixed:
+    - snapshot rebuild/filtering are CPU-bound
+    - query embedding is GPU-accelerated if available, otherwise CPU-bound
+    - FAISS search can be CPU or GPU depending on index placement
+- Important note:
+  - For the current tiny tutorial corpus, query embedding is usually more expensive than exact FAISS search.
+  - For larger corpora, `IndexFlatIP` search can eventually become a real bottleneck because it scales linearly with `N`.
+
+### `CrossEncoderReranker.rerank()`
+
+- Runtime shape:
+  - build `(query, document)` input pairs for every candidate
+  - run cross-encoder inference for each pair
+  - sort by score
+- Approximate cost:
+  - `O(m * S)` to build input pairs
+  - plus `m` cross-encoder forward passes
+  - plus `O(m log m)` to sort scores
+- Bound:
+  - mixed, but dominated by model inference:
+    - pair construction and sort are CPU-bound
+    - `predict(pairs)` is GPU-accelerated if available, otherwise CPU-bound
+- Why this is usually the most expensive step:
+  - The embedding retriever encodes the query once and reuses cached document vectors.
+  - The cross-encoder reprocesses the combined query-document text for every candidate on every query.
+  - That repeated per-candidate transformer work is typically more expensive than one query embedding plus a small vector search.
+
+### `HybridRetrievalStrategy.retrieve()`
+
+- Runtime shape:
+  - run BM25 retrieval
+  - run dense retrieval
+  - fuse rankings
+  - rerank the fused candidates
+- Approximate cost:
+  - `T_hybrid = T_bm25 + T_dense + T_fusion + T_rerank`
+- Bound:
+  - mixed.
+- Why:
+  - lexical retrieval and fusion are CPU-bound
+  - dense encoding and cross-encoder reranking are model-inference-bound
+- Important note:
+  - In practice, `T_rerank` is usually the dominant term once `m` is more than a few candidates.
+
+### `RAGChatbot.build_prompt()`
+
+- Runtime shape:
+  - call retrieval synchronously
+  - append retrieved context and chat history into a prompt string
+- Approximate cost:
+  - retrieval cost plus prompt assembly linear in the size of selected context and history
+- Bound:
+  - CPU-bound.
+- Why:
+  - The implementation is Python list building and string joining.
+- Important note:
+  - This layer is not numerically expensive, but it is latency-critical because no response token can stream until retrieval and prompt assembly finish.
+
+## CPU-Bound Implementations In The Current Flow
+
+- Fully CPU-bound:
+  - `TiktokenTokenizer`
+  - `KeywordRetrievalStrategy`
+  - most of `BM25RetrievalStrategy`
+  - `_serialize_documents(...)` and corpus snapshot comparisons
+  - reciprocal-rank fusion in `HybridRetrievalStrategy`
+  - Python-side sorting, filtering, and prompt construction
+- Mixed but with CPU control-plane overhead:
+  - `EmbeddingRetrievalStrategy`
+  - `CrossEncoderReranker`
+- Why these remain CPU-bound even when a GPU is available:
+  - They are dominated by Python control flow, string processing, lexical statistics, or small object manipulation rather than large batched tensor math.
+
+## Relative Cost Expectation For Current `hybrid` Mode
+
+- Expected order for the current small-corpus tutorial app:
+  1. `CrossEncoderReranker.rerank()`
+  2. query embedding in `EmbeddingRetrievalStrategy.retrieve()`
+  3. repeated corpus serialization and change detection
+  4. BM25 retrieval
+  5. reciprocal-rank fusion and prompt assembly
+- Important caveat:
+  - If the corpus grows substantially, exact `IndexFlatIP` search can move up the list.
+  - For the current in-memory document set, transformer inference remains the more important latency source.
+
+## Recommended Optimization Order
+
+- First: keep the current architecture and optimize local model inference.
+  - Prefer `sentence-transformers` backends such as ONNX or OpenVINO for both the embedding model and the cross-encoder.
+  - If CPU-bound, quantized ONNX or OpenVINO is the first practical step.
+- Second: make reranking optional or reduce the fused candidate count.
+  - This preserves the tutorial comparison path while giving a clear latency-quality switch.
+- Third: cache serialized retrieval text and any document-derived metadata once per corpus build.
+  - This removes repeated Python work without changing ranking behavior.
+- Fourth: move retrieval off the event loop boundary with `asyncio.to_thread(...)` only if terminal responsiveness matters.
+  - This improves app responsiveness but does not make local inference itself faster.
+- Fifth: switch FAISS from `IndexFlatIP` to an approximate index such as HNSW or IVF only when corpus size justifies it.
+  - For the current tiny corpus, approximate indexing adds complexity without meaningful latency benefit.
+- Sixth: consider Qdrant only when persistence, filtering, or concurrent multi-user serving becomes a requirement.
+  - It is a storage and serving choice, not the first speed fix for this tutorial app.
+
+## Rollout Notes
+
+- The most defensible near-term change set is small:
+  - add backend selection for sentence-transformer and cross-encoder loading
+  - cache serialized documents once
+  - add a reranker on/off switch or lower candidate fanout
+- Parallel or async retrieval libraries are not the main answer for the current code path because the expensive stages are local transformer forward passes, not network I/O.

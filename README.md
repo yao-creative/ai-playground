@@ -1,4 +1,4 @@
-# `AI PlayGround`
+# `AI PlayGround, Zero to Hero`
 
 A series of experiments of playing with AI chat in varying complexities of design.
 
@@ -34,9 +34,24 @@ This folder is organized as a numbered progression from basic chat to simple ret
 
 The numbering is intentional:
 
-- `01` shows the smallest useful baseline.
-- `02` keeps the same mental model and adds streaming.
-- `03` adds retrieval and context assembly without turning the codebase into a framework.
+- `01` Smallest useful terminal chat loop
+- `02` Streamed Response
+- `03` RAG-ed Chat (Builder + Strategy Pattern)
+  - (Hybrid - Semantic, BM25)
+  - Semantic
+  - Keyword (Full text search. Jaccard)
+- `04` Eval Harnesses
+- `05` Agentic RAG
+- `06` Queue-Pair, PQ/ EQ for async message 
+  - (Tool calls)
+  - User request Registration
+  - Evals to DB?
+- `07` Session management
+- `08` Real vector store/ management
+
+`09` Semantic IDs + Generative Recommendation Systems
+
+
 
 ## Features
 

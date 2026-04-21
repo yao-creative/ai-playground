@@ -16,6 +16,7 @@ This directory is intentionally small. The goal is not to ship a production fram
 
 - [https://hamel.dev/blog/posts/evals/](https://hamel.dev/blog/posts/evals/)
 - [https://jxnl.co/writing/2024/02/28/levels-of-complexity-rag-applications/](https://jxnl.co/writing/2024/02/28/levels-of-complexity-rag-applications/)
+- [https://jxnl.co/writing/2025/05/19/there-are-only-6-rag-evals/#tier-2-primary-rag-relationships](https://jxnl.co/writing/2025/05/19/there-are-only-6-rag-evals/#tier-2-primary-rag-relationships) 
 - [https://www.sh-reya.com/blog/ai-engineering-flywheel/#1-evaluation-defining-success-metrics](https://www.sh-reya.com/blog/ai-engineering-flywheel/#1-evaluation-defining-success-metrics)
 - [https://eugeneyan.com/writing/evals/](https://eugeneyan.com/writing/evals/)
 - [https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
@@ -50,8 +51,6 @@ The numbering is intentional:
 - `08` Real vector store/ management
 
 `09` Semantic IDs + Generative Recommendation Systems
-
-
 
 ## Features
 

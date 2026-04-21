@@ -1,15 +1,18 @@
 PYTHON := uv run python
 PYTEST := uv run pytest
 
-.PHONY: test test-chat test-rag test-live-happy-paths run-history run-stream run-rag
+.PHONY: test test-chat test-rag test-evals test-live-happy-paths run-history run-stream run-rag run-evals
 
-test: test-chat test-rag
+test: test-chat test-rag test-evals
 
 test-chat:
 	$(PYTEST) tests/test_ai_chat_entrypoints.py
 
 test-rag:
 	$(PYTEST) tests/test_rag_retrieval.py
+
+test-evals:
+	$(PYTEST) tests/test_eval_harness.py
 
 test-live-happy-paths:
 	$(PYTEST) tests/e2e/test_live_happy_paths.py
@@ -22,3 +25,6 @@ run-stream:
 
 run-rag:
 	uv run src/03-rag-chat/main.py
+
+run-evals:
+	uv run src/04-evals/main.py

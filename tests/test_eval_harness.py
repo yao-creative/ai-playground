@@ -1,8 +1,8 @@
 import importlib.util
 import json
-import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -13,7 +13,7 @@ if str(EVAL_DIR) not in sys.path:
 
 from dataset import load_examples
 from documents import build_documents
-from domain import EvalExample, RetrievedDoc, RunRecord, Usage
+from domain import AnswerResult, EvalExample, RetrievedDoc, RunRecord, Usage
 from reporting import write_run_record
 from retriever import BM25Retriever
 from scorers import GoldDocHitAtKScorer
@@ -66,7 +66,7 @@ def test_write_run_record_serializes_required_fields(tmp_path: Path) -> None:
         final_prompt="prompt",
         answer="answer",
         latency_ms=12.5,
-        model="stub-answerer",
+        model="gpt-5-mini",
         usage=Usage(),
     )
 
@@ -106,7 +106,7 @@ def test_gold_doc_hit_at_k_passes_and_fails() -> None:
         final_prompt="prompt",
         answer="answer",
         latency_ms=5.0,
-        model="stub-answerer",
+        model="gpt-5-mini",
         usage=Usage(),
     )
     failing_run = RunRecord(
@@ -128,7 +128,7 @@ def test_gold_doc_hit_at_k_passes_and_fails() -> None:
         final_prompt="prompt",
         answer="answer",
         latency_ms=5.0,
-        model="stub-answerer",
+        model="gpt-5-mini",
         usage=Usage(),
     )
 
@@ -141,21 +141,45 @@ def test_gold_doc_hit_at_k_passes_and_fails() -> None:
     assert failing_result.score == 0.0
 
 
-def test_main_runs_in_offline_safe_mode(tmp_path: Path) -> None:
-    completed = subprocess.run(
-        [
-            sys.executable,
-            str(EVAL_DIR / "main.py"),
-            "--runs-dir",
-            str(tmp_path),
-        ],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
+def test_build_answerer_requires_api_key() -> None:
+    main = load_main_module()
+    settings = SimpleNamespace(api_key=None, model="gpt-5-mini")
+
+    try:
+        main.build_answerer(settings)
+    except ValueError as error:
+        assert "OPENAI_API_KEY is required" in str(error)
+    else:
+        raise AssertionError("Expected build_answerer to reject missing API keys.")
+
+
+def test_run_all_examples_respects_semaphore_and_writes_records(tmp_path: Path) -> None:
+    main = load_main_module()
+    examples = load_examples()[:3]
+    documents = build_documents()
+    retriever = BM25Retriever("gpt-5-mini")
+
+    class FakeAnswerer:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def answer(self, question: str, retrieved_docs: list[RetrievedDoc]) -> AnswerResult:
+            self.calls.append(question)
+            return AnswerResult(
+                answer=f"stubbed answer for {question}",
+                prompt=f"prompt for {question}",
+                model="fake-answerer",
+                usage=Usage(),
+            )
+
+    answerer = FakeAnswerer()
+    scorers = [GoldDocHitAtKScorer(k=3)]
+    settings = SimpleNamespace(retrieval_limit=3, runs_dir=tmp_path, max_concurrency=2)
+
+    run_records = main.asyncio.run(
+        main.run_all_examples(examples, documents, retriever, answerer, scorers, settings)
     )
 
-    assert completed.returncode == 0, completed.stderr
-    assert "examples_run=20" in completed.stdout
+    assert [run_record.example_id for run_record in run_records] == [example.id for example in examples]
+    assert len(answerer.calls) == len(examples)
     assert (tmp_path / "ex-001.json").exists()

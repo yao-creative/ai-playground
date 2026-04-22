@@ -132,13 +132,23 @@ uv run src/03-rag-chat/main.py --strategy embedding
 Run the smoke tests:
 
 ```bash
-make test
+make test-all
 ```
 
 Run the opt-in live happy-path e2e suite:
 
 ```bash
-RUN_LIVE_TESTS=1 make test-live-happy-paths
+RUN_LIVE_TESTS=1 make test-90-live-happy-paths
+```
+
+Available test targets:
+
+```bash
+make test-01-chat-entrypoints
+make test-03-rag-retrieval
+make test-04-eval-harness
+make test-all
+RUN_LIVE_TESTS=1 make test-90-live-happy-paths
 ```
 
 Live happy-path tests reuse the normal app config from `.env`:

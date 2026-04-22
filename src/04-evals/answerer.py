@@ -26,29 +26,6 @@ def build_prompt(question: str, retrieved_docs: list[RetrievedDoc]) -> str:
     return "\n".join(sections)
 
 
-class StubAnswerer:
-    def __init__(self, model: str = "stub-answerer") -> None:
-        self.model = model
-
-    def answer(self, question: str, retrieved_docs: list[RetrievedDoc]) -> AnswerResult:
-        prompt = build_prompt(question, retrieved_docs)
-        if retrieved_docs:
-            top_document = retrieved_docs[0]
-            answer = (
-                f"Stub mode: inspect [{top_document.id}] {top_document.title} and replace this "
-                "with a real answerer or a judge-ready baseline."
-            )
-        else:
-            answer = "Stub mode: no retrieved context. Replace this with refusal behavior exercises."
-
-        return AnswerResult(
-            answer=answer,
-            prompt=prompt,
-            model=self.model,
-            usage=Usage(),
-        )
-
-
 class OpenAIAnswerer:
     def __init__(self, *, api_key: str, model: str) -> None:
         self.client = OpenAI(api_key=api_key)

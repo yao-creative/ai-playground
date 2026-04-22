@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-013",
+  "question": "What has to happen before a feature launch?",
+  "category": "multi_fact",
+  "expected_answer_notes": "Answer should mention QA sign-off, documentation review, analytics event verification, and rollback plan approval.",
+  "gold_doc_ids": [
+    "doc-007"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-007",
+      "title": "Product Launch Checklist",
+      "category": "product",
+      "text": "Before launch, every feature must complete QA sign-off, documentation review, analytics event verification, and rollback plan approval. Features touching billing also require finance review and a staged release plan.",
+      "rank": 1,
+      "score": 2.698640823364258
+    },
+    {
+      "id": "doc-005",
+      "title": "Incident Severity Matrix",
+      "category": "ops",
+      "text": "A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.",
+      "rank": 2,
+      "score": 0.9372656941413879
+    },
+    {
+      "id": "doc-010",
+      "title": "Office Access Procedures",
+      "category": "facilities",
+      "text": "Employees may access the office from 07:00 to 22:00 using their badge. Guests must be registered by a host before arrival and remain escorted at all times outside reception and meeting rooms.",
+      "rank": 3,
+      "score": 0.8345789909362793
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-007] Product Launch Checklist (product): Before launch, every feature must complete QA sign-off, documentation review, analytics event verification, and rollback plan approval. Features touching billing also require finance review and a staged release plan.\n- [doc-005] Incident Severity Matrix (ops): A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.\n- [doc-010] Office Access Procedures (facilities): Employees may access the office from 07:00 to 22:00 using their badge. Guests must be registered by a host before arrival and remain escorted at all times outside reception and meeting rooms.\nQuestion: What has to happen before a feature launch?\nAnswer:",
+  "answer": "Before a feature launch, it must complete QA sign-off, documentation review, analytics event verification, and rollback plan approval. If the feature touches billing, it also requires finance review and a staged release plan.",
+  "latency_ms": 1734.0843749698251,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 212,
+    "output_tokens": 45,
+    "total_tokens": 257
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-007']; retrieved ['doc-007', 'doc-005', 'doc-010']; matched ['doc-007']"
+    }
+  ]
+}

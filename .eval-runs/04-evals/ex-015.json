@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-015",
+  "question": "How long are application logs retained?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention 90 days.",
+  "gold_doc_ids": [
+    "doc-008"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-008",
+      "title": "Data Retention Policy",
+      "category": "security",
+      "text": "Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.",
+      "rank": 1,
+      "score": 3.7532999515533447
+    },
+    {
+      "id": "doc-004",
+      "title": "Laptop Replacement Standard",
+      "category": "it",
+      "text": "Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.",
+      "rank": 2,
+      "score": 0.4558415710926056
+    },
+    {
+      "id": "doc-006",
+      "title": "Customer Support SLA",
+      "category": "support",
+      "text": "Priority enterprise tickets receive a first response within one hour during business hours. Standard tickets receive a first response within eight business hours. Bug reports linked to production outages are escalated immediately to engineering.",
+      "rank": 3,
+      "score": 0.4299687147140503
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-008] Data Retention Policy (security): Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.\n- [doc-004] Laptop Replacement Standard (it): Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.\n- [doc-006] Customer Support SLA (support): Priority enterprise tickets receive a first response within one hour during business hours. Standard tickets receive a first response within eight business hours. Bug reports linked to production outages are escalated immediately to engineering.\nQuestion: How long are application logs retained?\nAnswer:",
+  "answer": "Application logs are retained for **90 days**.",
+  "latency_ms": 1267.1615001745522,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 197,
+    "output_tokens": 14,
+    "total_tokens": 211
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-008']; retrieved ['doc-008', 'doc-004', 'doc-006']; matched ['doc-008']"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-010",
+  "question": "What conditions allow an early laptop replacement?",
+  "category": "multi_fact",
+  "expected_answer_notes": "Answer should mention repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.",
+  "gold_doc_ids": [
+    "doc-004"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-004",
+      "title": "Laptop Replacement Standard",
+      "category": "it",
+      "text": "Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.",
+      "rank": 1,
+      "score": 3.352917194366455
+    },
+    {
+      "id": "doc-005",
+      "title": "Incident Severity Matrix",
+      "category": "ops",
+      "text": "A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.",
+      "rank": 2,
+      "score": 0.0
+    },
+    {
+      "id": "doc-002",
+      "title": "Annual Leave Guidelines",
+      "category": "hr",
+      "text": "Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.",
+      "rank": 3,
+      "score": 0.0
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-004] Laptop Replacement Standard (it): Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.\n- [doc-005] Incident Severity Matrix (ops): A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.\n- [doc-002] Annual Leave Guidelines (hr): Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.\nQuestion: What conditions allow an early laptop replacement?\nAnswer:",
+  "answer": "Early laptop replacement is permitted for **repeated hardware failures**, **battery health below 70 percent**, or **inability to run required local development tooling**.",
+  "latency_ms": 1965.731999836862,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 218,
+    "output_tokens": 36,
+    "total_tokens": 254
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-004']; retrieved ['doc-004', 'doc-005', 'doc-002']; matched ['doc-004']"
+    }
+  ]
+}

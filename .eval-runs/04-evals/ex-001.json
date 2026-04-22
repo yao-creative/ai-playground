@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-001",
+  "question": "How many remote days are allowed each week?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention up to three remote days per week and manager approval.",
+  "gold_doc_ids": [
+    "doc-001"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-001",
+      "title": "Remote Work Policy",
+      "category": "hr",
+      "text": "Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.",
+      "rank": 1,
+      "score": 2.581104278564453
+    },
+    {
+      "id": "doc-002",
+      "title": "Annual Leave Guidelines",
+      "category": "hr",
+      "text": "Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.",
+      "rank": 2,
+      "score": 1.4684725999832153
+    },
+    {
+      "id": "doc-008",
+      "title": "Data Retention Policy",
+      "category": "security",
+      "text": "Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.",
+      "rank": 3,
+      "score": 1.264715552330017
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-001] Remote Work Policy (hr): Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.\n- [doc-002] Annual Leave Guidelines (hr): Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.\n- [doc-008] Data Retention Policy (security): Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.\nQuestion: How many remote days are allowed each week?\nAnswer:",
+  "answer": "Employees may work remotely up to **three days per week** (with manager approval).",
+  "latency_ms": 1726.090625161305,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 216,
+    "output_tokens": 21,
+    "total_tokens": 237
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-001']; retrieved ['doc-001', 'doc-002', 'doc-008']; matched ['doc-001']"
+    }
+  ]
+}

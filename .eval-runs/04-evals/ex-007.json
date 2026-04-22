@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-007",
+  "question": "When do hotel bookings need director approval?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention above 180 USD per night unless travel occurs during a peak event period.",
+  "gold_doc_ids": [
+    "doc-003"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-003",
+      "title": "Expense Reimbursement Rules",
+      "category": "finance",
+      "text": "Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.",
+      "rank": 1,
+      "score": 3.99958872795105
+    },
+    {
+      "id": "doc-007",
+      "title": "Product Launch Checklist",
+      "category": "product",
+      "text": "Before launch, every feature must complete QA sign-off, documentation review, analytics event verification, and rollback plan approval. Features touching billing also require finance review and a staged release plan.",
+      "rank": 2,
+      "score": 0.5638278126716614
+    },
+    {
+      "id": "doc-001",
+      "title": "Remote Work Policy",
+      "category": "hr",
+      "text": "Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.",
+      "rank": 3,
+      "score": 0.5258564352989197
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-003] Expense Reimbursement Rules (finance): Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.\n- [doc-007] Product Launch Checklist (product): Before launch, every feature must complete QA sign-off, documentation review, analytics event verification, and rollback plan approval. Features touching billing also require finance review and a staged release plan.\n- [doc-001] Remote Work Policy (hr): Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.\nQuestion: When do hotel bookings need director approval?\nAnswer:",
+  "answer": "Hotel bookings above **180 USD per night** require **director approval**, **unless** the travel occurs during a **peak event period**.",
+  "latency_ms": 2874.400124885142,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 214,
+    "output_tokens": 32,
+    "total_tokens": 246
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-003']; retrieved ['doc-003', 'doc-007', 'doc-001']; matched ['doc-003']"
+    }
+  ]
+}

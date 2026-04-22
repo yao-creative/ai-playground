@@ -6,7 +6,7 @@ This folder is meant to teach evals in layers. Do these in order and keep each s
 
 - [ ] Read `README.md` and trace the execution flow in `main.py`.
 - [ ] Inspect `domain.py` and identify the core interfaces: `Retriever`, `Answerer`, `Scorer`.
-- [ ] Run the script once in stub mode and inspect one JSON file in `.eval-runs/04-evals/`.
+- [ ] Run the script once and inspect one JSON file in `.eval-runs/04-evals/`.
 - [ ] Explain to yourself what is being evaluated today vs what is only scaffolded.
 
 ## 2. Understand The Dataset
@@ -42,7 +42,7 @@ This folder is meant to teach evals in layers. Do these in order and keep each s
 ## 5. Learn Prompt And Answer Architecture
 
 - [ ] Read `answerer.py` and inspect the prompt built by `build_prompt`.
-- [ ] Compare the stub answerer output with a live model run.
+- [ ] Compare two prompt variants on the same retrieval results.
 - [ ] Rewrite the system prompt once to be stricter about unsupported answers.
 - [ ] Add a second prompt variant for comparison.
 - [ ] Add a CLI flag or constant to switch prompt variants.
@@ -106,7 +106,7 @@ This folder is meant to teach evals in layers. Do these in order and keep each s
 
 - [ ] Compare BM25 vs future embedding retrieval on the same dataset.
 - [ ] Compare prompt A vs prompt B on unsupported questions.
-- [ ] Compare stub answerer vs live model answerer on the same retrieval results.
+- [ ] Compare prompt A vs prompt B on the same retrieval results.
 - [ ] Write down what changed in retrieval quality vs final answer quality.
 - [ ] Avoid changing retrieval and prompt at the same time unless you are doing a deliberate experiment.
 

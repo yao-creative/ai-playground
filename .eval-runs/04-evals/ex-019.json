@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-019",
+  "question": "When can employees access the office and what applies to guests?",
+  "category": "multi_fact",
+  "expected_answer_notes": "Answer should mention 07:00 to 22:00 badge access and guests must be registered and escorted.",
+  "gold_doc_ids": [
+    "doc-010"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-010",
+      "title": "Office Access Procedures",
+      "category": "facilities",
+      "text": "Employees may access the office from 07:00 to 22:00 using their badge. Guests must be registered by a host before arrival and remain escorted at all times outside reception and meeting rooms.",
+      "rank": 1,
+      "score": 5.049929618835449
+    },
+    {
+      "id": "doc-009",
+      "title": "Engineering On-Call Expectations",
+      "category": "engineering",
+      "text": "Primary on-call engineers must acknowledge pager alerts within 10 minutes and begin triage within 15 minutes. If no acknowledgment occurs, the alert escalates automatically to the secondary on-call engineer and then to the engineering manager.",
+      "rank": 2,
+      "score": 1.474265456199646
+    },
+    {
+      "id": "doc-002",
+      "title": "Annual Leave Guidelines",
+      "category": "hr",
+      "text": "Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.",
+      "rank": 3,
+      "score": 1.1212979555130005
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-010] Office Access Procedures (facilities): Employees may access the office from 07:00 to 22:00 using their badge. Guests must be registered by a host before arrival and remain escorted at all times outside reception and meeting rooms.\n- [doc-009] Engineering On-Call Expectations (engineering): Primary on-call engineers must acknowledge pager alerts within 10 minutes and begin triage within 15 minutes. If no acknowledgment occurs, the alert escalates automatically to the secondary on-call engineer and then to the engineering manager.\n- [doc-002] Annual Leave Guidelines (hr): Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.\nQuestion: When can employees access the office and what applies to guests?\nAnswer:",
+  "answer": "Employees may access the office from **07:00 to 22:00** using their badge. **Guests must be registered by a host before arrival** and must **remain escorted at all times** outside reception and meeting rooms.",
+  "latency_ms": 1772.3629579413682,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 226,
+    "output_tokens": 50,
+    "total_tokens": 276
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-010']; retrieved ['doc-010', 'doc-009', 'doc-002']; matched ['doc-010']"
+    }
+  ]
+}

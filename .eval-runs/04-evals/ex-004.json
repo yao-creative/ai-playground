@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-004",
+  "question": "How much annual leave do full-time employees get?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention 18 days per calendar year.",
+  "gold_doc_ids": [
+    "doc-002"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-002",
+      "title": "Annual Leave Guidelines",
+      "category": "hr",
+      "text": "Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.",
+      "rank": 1,
+      "score": 4.279696941375732
+    },
+    {
+      "id": "doc-001",
+      "title": "Remote Work Policy",
+      "category": "hr",
+      "text": "Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.",
+      "rank": 2,
+      "score": 1.1865534782409668
+    },
+    {
+      "id": "doc-003",
+      "title": "Expense Reimbursement Rules",
+      "category": "finance",
+      "text": "Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.",
+      "rank": 3,
+      "score": 0.8194224238395691
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-002] Annual Leave Guidelines (hr): Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.\n- [doc-001] Remote Work Policy (hr): Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.\n- [doc-003] Expense Reimbursement Rules (finance): Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.\nQuestion: How much annual leave do full-time employees get?\nAnswer:",
+  "answer": "Full-time employees receive **18 days of annual leave each calendar year**.",
+  "latency_ms": 1726.277875015512,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 228,
+    "output_tokens": 19,
+    "total_tokens": 247
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-002']; retrieved ['doc-002', 'doc-001', 'doc-003']; matched ['doc-002']"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-017",
+  "question": "How quickly must the primary on-call engineer respond to a pager alert?",
+  "category": "multi_fact",
+  "expected_answer_notes": "Answer should mention acknowledgment within 10 minutes and triage within 15 minutes.",
+  "gold_doc_ids": [
+    "doc-009"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-009",
+      "title": "Engineering On-Call Expectations",
+      "category": "engineering",
+      "text": "Primary on-call engineers must acknowledge pager alerts within 10 minutes and begin triage within 15 minutes. If no acknowledgment occurs, the alert escalates automatically to the secondary on-call engineer and then to the engineering manager.",
+      "rank": 1,
+      "score": 7.093428611755371
+    },
+    {
+      "id": "doc-011",
+      "title": "Hiring Interview Rubric",
+      "category": "recruiting",
+      "text": "Interviewers score candidates across problem solving, communication, technical depth, and role alignment on a scale from 1 to 4. Written feedback should be submitted within 24 hours and must include at least two evidence-based observations.",
+      "rank": 2,
+      "score": 1.243904709815979
+    },
+    {
+      "id": "doc-010",
+      "title": "Office Access Procedures",
+      "category": "facilities",
+      "text": "Employees may access the office from 07:00 to 22:00 using their badge. Guests must be registered by a host before arrival and remain escorted at all times outside reception and meeting rooms.",
+      "rank": 3,
+      "score": 1.1630977392196655
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-009] Engineering On-Call Expectations (engineering): Primary on-call engineers must acknowledge pager alerts within 10 minutes and begin triage within 15 minutes. If no acknowledgment occurs, the alert escalates automatically to the secondary on-call engineer and then to the engineering manager.\n- [doc-011] Hiring Interview Rubric (recruiting): Interviewers score candidates across problem solving, communication, technical depth, and role alignment on a scale from 1 to 4. Written feedback should be submitted within 24 hours and must include at least two evidence-based observations.\n- [doc-010] Office Access Procedures (facilities): Employees may access the office from 07:00 to 22:00 using their badge. Guests must be registered by a host before arrival and remain escorted at all times outside reception and meeting rooms.\nQuestion: How quickly must the primary on-call engineer respond to a pager alert?\nAnswer:",
+  "answer": "The primary on-call engineer must acknowledge pager alerts within **10 minutes**.",
+  "latency_ms": 1247.422750107944,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 228,
+    "output_tokens": 19,
+    "total_tokens": 247
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-009']; retrieved ['doc-009', 'doc-011', 'doc-010']; matched ['doc-009']"
+    }
+  ]
+}

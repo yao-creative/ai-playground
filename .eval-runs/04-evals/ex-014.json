@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-014",
+  "question": "What extra review applies to billing features before launch?",
+  "category": "paraphrase",
+  "expected_answer_notes": "Answer should mention finance review and a staged release plan.",
+  "gold_doc_ids": [
+    "doc-007"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-007",
+      "title": "Product Launch Checklist",
+      "category": "product",
+      "text": "Before launch, every feature must complete QA sign-off, documentation review, analytics event verification, and rollback plan approval. Features touching billing also require finance review and a staged release plan.",
+      "rank": 1,
+      "score": 4.600681781768799
+    },
+    {
+      "id": "doc-001",
+      "title": "Remote Work Policy",
+      "category": "hr",
+      "text": "Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.",
+      "rank": 2,
+      "score": 0.6682572364807129
+    },
+    {
+      "id": "doc-012",
+      "title": "Vendor Review Requirements",
+      "category": "procurement",
+      "text": "New vendors handling customer data must complete a security questionnaire, sign a data processing agreement, and provide evidence of encryption at rest and in transit. Annual renewals require reassessment if risk exposure changes.",
+      "rank": 3,
+      "score": 0.6681971549987793
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-007] Product Launch Checklist (product): Before launch, every feature must complete QA sign-off, documentation review, analytics event verification, and rollback plan approval. Features touching billing also require finance review and a staged release plan.\n- [doc-001] Remote Work Policy (hr): Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.\n- [doc-012] Vendor Review Requirements (procurement): New vendors handling customer data must complete a security questionnaire, sign a data processing agreement, and provide evidence of encryption at rest and in transit. Annual renewals require reassessment if risk exposure changes.\nQuestion: What extra review applies to billing features before launch?\nAnswer:",
+  "answer": "Billing-related features require **finance review** and a **staged release plan** before launch.",
+  "latency_ms": 1552.5272500235587,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 208,
+    "output_tokens": 23,
+    "total_tokens": 231
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-007']; retrieved ['doc-007', 'doc-001', 'doc-012']; matched ['doc-007']"
+    }
+  ]
+}

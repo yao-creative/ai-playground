@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-006",
+  "question": "Can unused leave roll into next year?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention carry forward up to five days.",
+  "gold_doc_ids": [
+    "doc-002"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-002",
+      "title": "Annual Leave Guidelines",
+      "category": "hr",
+      "text": "Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.",
+      "rank": 1,
+      "score": 4.259696006774902
+    },
+    {
+      "id": "doc-005",
+      "title": "Incident Severity Matrix",
+      "category": "ops",
+      "text": "A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.",
+      "rank": 2,
+      "score": 0.0
+    },
+    {
+      "id": "doc-012",
+      "title": "Vendor Review Requirements",
+      "category": "procurement",
+      "text": "New vendors handling customer data must complete a security questionnaire, sign a data processing agreement, and provide evidence of encryption at rest and in transit. Annual renewals require reassessment if risk exposure changes.",
+      "rank": 3,
+      "score": 0.0
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-002] Annual Leave Guidelines (hr): Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.\n- [doc-005] Incident Severity Matrix (ops): A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.\n- [doc-012] Vendor Review Requirements (procurement): New vendors handling customer data must complete a security questionnaire, sign a data processing agreement, and provide evidence of encryption at rest and in transit. Annual renewals require reassessment if risk exposure changes.\nQuestion: Can unused leave roll into next year?\nAnswer:",
+  "answer": "Yes. Unused annual leave may be carried forward, but only up to five days into the next year.",
+  "latency_ms": 1185.2972500491887,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 222,
+    "output_tokens": 26,
+    "total_tokens": 248
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-002']; retrieved ['doc-002', 'doc-005', 'doc-012']; matched ['doc-002']"
+    }
+  ]
+}

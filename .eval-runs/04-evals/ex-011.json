@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-011",
+  "question": "What qualifies as a Sev-1 incident?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention more than 50 percent active-user downtime or confirmed data loss.",
+  "gold_doc_ids": [
+    "doc-005"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-005",
+      "title": "Incident Severity Matrix",
+      "category": "ops",
+      "text": "A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.",
+      "rank": 1,
+      "score": 3.540637493133545
+    },
+    {
+      "id": "doc-011",
+      "title": "Hiring Interview Rubric",
+      "category": "recruiting",
+      "text": "Interviewers score candidates across problem solving, communication, technical depth, and role alignment on a scale from 1 to 4. Written feedback should be submitted within 24 hours and must include at least two evidence-based observations.",
+      "rank": 2,
+      "score": 0.8617814779281616
+    },
+    {
+      "id": "doc-012",
+      "title": "Vendor Review Requirements",
+      "category": "procurement",
+      "text": "New vendors handling customer data must complete a security questionnaire, sign a data processing agreement, and provide evidence of encryption at rest and in transit. Annual renewals require reassessment if risk exposure changes.",
+      "rank": 3,
+      "score": 0.3172743022441864
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-005] Incident Severity Matrix (ops): A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.\n- [doc-011] Hiring Interview Rubric (recruiting): Interviewers score candidates across problem solving, communication, technical depth, and role alignment on a scale from 1 to 4. Written feedback should be submitted within 24 hours and must include at least two evidence-based observations.\n- [doc-012] Vendor Review Requirements (procurement): New vendors handling customer data must complete a security questionnaire, sign a data processing agreement, and provide evidence of encryption at rest and in transit. Annual renewals require reassessment if risk exposure changes.\nQuestion: What qualifies as a Sev-1 incident?\nAnswer:",
+  "answer": "A Sev-1 incident is customer-facing downtime affecting more than 50% of active users, or any confirmed data loss event.",
+  "latency_ms": 1144.9822909198701,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 223,
+    "output_tokens": 30,
+    "total_tokens": 253
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-005']; retrieved ['doc-005', 'doc-011', 'doc-012']; matched ['doc-005']"
+    }
+  ]
+}

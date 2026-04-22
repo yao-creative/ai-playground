@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-003",
+  "question": "Do I need any prerequisite before using personal networks to access internal systems?",
+  "category": "paraphrase",
+  "expected_answer_notes": "Answer should mention security training before access from personal networks.",
+  "gold_doc_ids": [
+    "doc-001"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-001",
+      "title": "Remote Work Policy",
+      "category": "hr",
+      "text": "Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.",
+      "rank": 1,
+      "score": 4.1298956871032715
+    },
+    {
+      "id": "doc-010",
+      "title": "Office Access Procedures",
+      "category": "facilities",
+      "text": "Employees may access the office from 07:00 to 22:00 using their badge. Guests must be registered by a host before arrival and remain escorted at all times outside reception and meeting rooms.",
+      "rank": 2,
+      "score": 2.750133991241455
+    },
+    {
+      "id": "doc-005",
+      "title": "Incident Severity Matrix",
+      "category": "ops",
+      "text": "A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.",
+      "rank": 3,
+      "score": 0.8282246589660645
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-001] Remote Work Policy (hr): Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.\n- [doc-010] Office Access Procedures (facilities): Employees may access the office from 07:00 to 22:00 using their badge. Guests must be registered by a host before arrival and remain escorted at all times outside reception and meeting rooms.\n- [doc-005] Incident Severity Matrix (ops): A Sev-1 incident means customer-facing downtime affecting more than 50 percent of active users or any confirmed data loss event. Sev-2 covers major degradation with a workaround. Sev-3 covers minor feature impact without broad business disruption.\nQuestion: Do I need any prerequisite before using personal networks to access internal systems?\nAnswer:",
+  "answer": "Yes. The Remote Work Policy says you must complete security training before accessing internal systems from personal networks.",
+  "latency_ms": 1951.18199987337,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 224,
+    "output_tokens": 24,
+    "total_tokens": 248
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-001']; retrieved ['doc-001', 'doc-010', 'doc-005']; matched ['doc-001']"
+    }
+  ]
+}

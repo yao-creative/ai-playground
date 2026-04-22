@@ -1,5 +1,4 @@
 import argparse
-import importlib.util
 from pathlib import Path
 import sys
 
@@ -7,36 +6,17 @@ from openai import OpenAI
 
 APP_DIR = Path(__file__).resolve().parent.parent
 MODULE_DIR = Path(__file__).resolve().parent
-RAG_DIR = APP_DIR / "03-rag-chat"
 
 if str(MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(MODULE_DIR))
 if str(APP_DIR) not in sys.path:
     sys.path.insert(1, str(APP_DIR))
-if str(RAG_DIR) not in sys.path:
-    sys.path.insert(2, str(RAG_DIR))
 
 from agent import AgenticRAG
 from config import Settings
+from data import build_documents
+from retrieval import BM25RetrievalStrategy, KeywordRetrievalStrategy, TiktokenTokenizer
 from terminal_app import TerminalChatApp
-
-
-def _load_module(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load module {name} from {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-rag_data = _load_module("rag03_data", RAG_DIR / "data.py")
-rag_retrieval = _load_module("rag03_retrieval", RAG_DIR / "retrieval.py")
-
-build_documents = rag_data.build_documents
-BM25RetrievalStrategy = rag_retrieval.BM25RetrievalStrategy
-KeywordRetrievalStrategy = rag_retrieval.KeywordRetrievalStrategy
-TiktokenTokenizer = rag_retrieval.TiktokenTokenizer
 
 
 def build_app(strategy: str = "bm25", max_steps: int = 4) -> TerminalChatApp:

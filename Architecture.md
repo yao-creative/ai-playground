@@ -1093,3 +1093,98 @@ sequenceDiagram
   - cache serialized documents once
   - add a reranker on/off switch or lower candidate fanout
 - Parallel or async retrieval libraries are not the main answer for the current code path because the expensive stages are local transformer forward passes, not network I/O.
+
+# Edit 6 Vanilla Agentic RAG 2026-04-22 18:39 Branch: feat/agent-rag
+
+## Agentic RAG Request Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Terminal as TerminalChatApp<br/>src/05-agentic-rag/terminal_app.py
+    participant Agent as AgenticRAG<br/>src/05-agentic-rag/agent.py
+    participant OpenAI as OpenAI Responses API
+    participant Tools as DocumentTools<br/>src/05-agentic-rag/tools.py
+    participant Retriever as BM25RetrievalStrategy or KeywordRetrievalStrategy<br/>src/03-rag-chat/retrieval.py
+
+    Terminal->>Agent: answer(user_text, chat_history)
+    loop one action per step until finish or max_steps
+        Agent->>Agent: build action prompt with prior tool results
+        Agent->>OpenAI: responses.create(model, input=action_prompt)
+        OpenAI-->>Agent: JSON tool call
+        alt tool_name == search_documents
+            Agent->>Tools: execute(search_documents)
+            Tools->>Retriever: retrieve(query, documents, limit)
+            Retriever-->>Tools: ranked documents
+            Tools-->>Agent: snippets with doc ids
+        else tool_name == read_document
+            Agent->>Tools: execute(read_document)
+            Tools-->>Agent: full document payload
+        else tool_name == finish
+            Agent->>Agent: validate supported flag and cited_doc_ids
+            Agent-->>Terminal: AgentRunResult
+        end
+    end
+    Terminal->>Terminal: append sources for supported answers
+    Terminal-->>Terminal: persist chat_history
+```
+
+## Unsupported / Guardrail Sequence (Mermaid)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as AgenticRAG
+    participant OpenAI as OpenAI Responses API
+    participant Guard as prior_calls + search_count
+    participant Tools as DocumentTools
+
+    Agent->>OpenAI: responses.create(action_prompt)
+    OpenAI-->>Agent: JSON action
+    alt repeated identical tool call
+        Agent->>Guard: normalize tool call
+        Guard-->>Agent: duplicate detected
+        Agent->>Agent: fallback unsupported result
+    else search exceeds two attempts
+        Agent->>Guard: increment search_count
+        Guard-->>Agent: search budget exhausted
+        Agent->>Agent: fallback unsupported result
+    else read_document hits unknown doc id on final step
+        Agent->>Tools: execute(read_document)
+        Tools-->>Agent: error
+        Agent->>Agent: fallback unsupported result
+    else finish claims supported without citations
+        Agent->>Agent: downgrade supported to false
+        Agent-->>Agent: return uncited final answer as unsupported
+    end
+```
+
+## Implementation Notes
+
+- `src/05-agentic-rag/main.py` composes the new lesson while reusing the fixed corpus and lexical retrieval strategies from `src/03-rag-chat`.
+- The import boundary is explicit and path-based:
+  - local `05` modules win for `agent.py`, `models.py`, and `terminal_app.py`
+  - `03` modules are loaded by file path for shared `data.py` and `retrieval.py`
+- `src/05-agentic-rag/agent.py` is intentionally small but carries the full control-plane contract:
+  - one JSON action per model call
+  - bounded step budget
+  - duplicate tool-call rejection
+  - maximum two searches per user turn
+  - finish-result validation before returning to the terminal app
+- `src/05-agentic-rag/tools.py` keeps the tool surface minimal:
+  - `search_documents(...)` for ranked snippets
+  - `read_document(...)` for full-document inspection
+- `finish(...)` is modeled as a structured action rather than an executable tool. That keeps the stop condition visible in the controller loop and avoids hiding final-answer validation in the tool layer.
+- `src/05-agentic-rag/terminal_app.py` appends `Sources: ...` only for supported answers with citations, then stores the rendered assistant text in chat history.
+
+## Rollout Notes
+
+- This lesson is intentionally narrower than the existing hybrid retrieval work:
+  - no reranker
+  - no vector-store abstraction
+  - no eval harness inside the lesson
+  - no external tool backends
+- The main teaching goal is to isolate the first agentic transition:
+  - from fixed retrieval pipeline
+  - to bounded tool-selection loop
+- The adjacent local README in `src/05-agentic-rag/README.md` mirrors this architecture-dump structure so the lesson can be read in isolation without opening the repo-root architecture log first.

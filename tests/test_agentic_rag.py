@@ -5,10 +5,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = REPO_ROOT / "src"
-RAG03_DIR = SRC_DIR / "03-rag-chat"
 RAG05_DIR = SRC_DIR / "05-agentic-rag"
 
-for path in (RAG05_DIR, RAG03_DIR, SRC_DIR):
+for path in (RAG05_DIR, SRC_DIR):
     path_str = str(path)
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
@@ -27,8 +26,8 @@ agent_module = load_module("agentic_rag_agent", RAG05_DIR / "agent.py")
 main_module = load_module("agentic_rag_main", RAG05_DIR / "main.py")
 terminal_module = load_module("agentic_rag_terminal", RAG05_DIR / "terminal_app.py")
 
-from data import build_documents
-from retrieval import KeywordRetrievalStrategy
+rag05_data_module = load_module("agentic_rag_data", RAG05_DIR / "data.py")
+rag05_retrieval_module = load_module("agentic_rag_retrieval", RAG05_DIR / "retrieval.py")
 
 
 class FakeResponse:
@@ -73,8 +72,10 @@ def test_agentic_rag_answers_with_citations() -> None:
     chatbot = agent_module.AgenticRAG(
         client=client,
         model="gpt-5-mini",
-        documents=build_documents(),
-        retrieval_strategy=KeywordRetrievalStrategy(main_module.TiktokenTokenizer("gpt-5-mini")),
+        documents=rag05_data_module.build_documents(),
+        retrieval_strategy=rag05_retrieval_module.KeywordRetrievalStrategy(
+            main_module.TiktokenTokenizer("gpt-5-mini")
+        ),
     )
 
     result = chatbot.answer("How many remote days are allowed?")
@@ -95,8 +96,10 @@ def test_agentic_rag_returns_unsupported_when_finish_lacks_citations() -> None:
     chatbot = agent_module.AgenticRAG(
         client=client,
         model="gpt-5-mini",
-        documents=build_documents(),
-        retrieval_strategy=KeywordRetrievalStrategy(main_module.TiktokenTokenizer("gpt-5-mini")),
+        documents=rag05_data_module.build_documents(),
+        retrieval_strategy=rag05_retrieval_module.KeywordRetrievalStrategy(
+            main_module.TiktokenTokenizer("gpt-5-mini")
+        ),
     )
 
     result = chatbot.answer("Do we reimburse gym memberships?")
@@ -116,8 +119,10 @@ def test_agentic_rag_stops_on_duplicate_tool_calls() -> None:
     chatbot = agent_module.AgenticRAG(
         client=client,
         model="gpt-5-mini",
-        documents=build_documents(),
-        retrieval_strategy=KeywordRetrievalStrategy(main_module.TiktokenTokenizer("gpt-5-mini")),
+        documents=rag05_data_module.build_documents(),
+        retrieval_strategy=rag05_retrieval_module.KeywordRetrievalStrategy(
+            main_module.TiktokenTokenizer("gpt-5-mini")
+        ),
     )
 
     result = chatbot.answer("What time can employees access the office?")

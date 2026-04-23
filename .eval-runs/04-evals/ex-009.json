@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-009",
+  "question": "When can engineering laptops be replaced on the normal cycle?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention every 36 months.",
+  "gold_doc_ids": [
+    "doc-004"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-009",
+      "title": "Engineering On-Call Expectations",
+      "category": "engineering",
+      "text": "Primary on-call engineers must acknowledge pager alerts within 10 minutes and begin triage within 15 minutes. If no acknowledgment occurs, the alert escalates automatically to the secondary on-call engineer and then to the engineering manager.",
+      "rank": 1,
+      "score": 2.7823047637939453
+    },
+    {
+      "id": "doc-004",
+      "title": "Laptop Replacement Standard",
+      "category": "it",
+      "text": "Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.",
+      "rank": 2,
+      "score": 1.491727352142334
+    },
+    {
+      "id": "doc-011",
+      "title": "Hiring Interview Rubric",
+      "category": "recruiting",
+      "text": "Interviewers score candidates across problem solving, communication, technical depth, and role alignment on a scale from 1 to 4. Written feedback should be submitted within 24 hours and must include at least two evidence-based observations.",
+      "rank": 3,
+      "score": 0.9833465814590454
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-009] Engineering On-Call Expectations (engineering): Primary on-call engineers must acknowledge pager alerts within 10 minutes and begin triage within 15 minutes. If no acknowledgment occurs, the alert escalates automatically to the secondary on-call engineer and then to the engineering manager.\n- [doc-004] Laptop Replacement Standard (it): Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.\n- [doc-011] Hiring Interview Rubric (recruiting): Interviewers score candidates across problem solving, communication, technical depth, and role alignment on a scale from 1 to 4. Written feedback should be submitted within 24 hours and must include at least two evidence-based observations.\nQuestion: When can engineering laptops be replaced on the normal cycle?\nAnswer:",
+  "answer": "Engineering laptops are eligible for replacement on the normal cycle every **36 months**.",
+  "latency_ms": 1562.3917079064995,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 220,
+    "output_tokens": 20,
+    "total_tokens": 240
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-004']; retrieved ['doc-009', 'doc-004', 'doc-011']; matched ['doc-004']"
+    }
+  ]
+}

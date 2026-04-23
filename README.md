@@ -1,4 +1,4 @@
-# `AI PlayGround`
+# `AI PlayGround, Zero to Hero`
 
 A series of experiments of playing with AI chat in varying complexities of design.
 
@@ -16,6 +16,7 @@ This directory is intentionally small. The goal is not to ship a production fram
 
 - [https://hamel.dev/blog/posts/evals/](https://hamel.dev/blog/posts/evals/)
 - [https://jxnl.co/writing/2024/02/28/levels-of-complexity-rag-applications/](https://jxnl.co/writing/2024/02/28/levels-of-complexity-rag-applications/)
+- [https://jxnl.co/writing/2025/05/19/there-are-only-6-rag-evals/#tier-2-primary-rag-relationships](https://jxnl.co/writing/2025/05/19/there-are-only-6-rag-evals/#tier-2-primary-rag-relationships) 
 - [https://www.sh-reya.com/blog/ai-engineering-flywheel/#1-evaluation-defining-success-metrics](https://www.sh-reya.com/blog/ai-engineering-flywheel/#1-evaluation-defining-success-metrics)
 - [https://eugeneyan.com/writing/evals/](https://eugeneyan.com/writing/evals/)
 - [https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
@@ -34,9 +35,22 @@ This folder is organized as a numbered progression from basic chat to simple ret
 
 The numbering is intentional:
 
-- `01` shows the smallest useful baseline.
-- `02` keeps the same mental model and adds streaming.
-- `03` adds retrieval and context assembly without turning the codebase into a framework.
+- `01` Smallest useful terminal chat loop
+- `02` Streamed Response
+- `03` RAG-ed Chat (Builder + Strategy Pattern)
+  - (Hybrid - Semantic, BM25)
+  - Semantic
+  - Keyword (Full text search. Jaccard)
+- `04` Eval Harnesses
+- `05` Agentic RAG
+- `06` Queue-Pair, PQ/ EQ for async message 
+  - (Tool calls)
+  - User request Registration
+  - Evals to DB?
+- `07` Session management
+- `08` Real vector store/ management
+
+`09` Semantic IDs + Generative Recommendation Systems
 
 ## Features
 
@@ -118,13 +132,23 @@ uv run src/03-rag-chat/main.py --strategy embedding
 Run the smoke tests:
 
 ```bash
-make test
+make test-all
 ```
 
 Run the opt-in live happy-path e2e suite:
 
 ```bash
-RUN_LIVE_TESTS=1 make test-live-happy-paths
+RUN_LIVE_TESTS=1 make test-90-live-happy-paths
+```
+
+Available test targets:
+
+```bash
+make test-01-chat-entrypoints
+make test-03-rag-retrieval
+make test-04-eval-harness
+make test-all
+RUN_LIVE_TESTS=1 make test-90-live-happy-paths
 ```
 
 Live happy-path tests reuse the normal app config from `.env`:

@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-002",
+  "question": "What are the core collaboration hours for remote work?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention 10:00 to 15:00 local time.",
+  "gold_doc_ids": [
+    "doc-001"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-001",
+      "title": "Remote Work Policy",
+      "category": "hr",
+      "text": "Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.",
+      "rank": 1,
+      "score": 4.782866954803467
+    },
+    {
+      "id": "doc-008",
+      "title": "Data Retention Policy",
+      "category": "security",
+      "text": "Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.",
+      "rank": 2,
+      "score": 1.7679824829101562
+    },
+    {
+      "id": "doc-004",
+      "title": "Laptop Replacement Standard",
+      "category": "it",
+      "text": "Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.",
+      "rank": 3,
+      "score": 1.4468357563018799
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-001] Remote Work Policy (hr): Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.\n- [doc-008] Data Retention Policy (security): Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.\n- [doc-004] Laptop Replacement Standard (it): Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.\nQuestion: What are the core collaboration hours for remote work?\nAnswer:",
+  "answer": "The core collaboration hours for remote work are **10:00 to 15:00 local time**.",
+  "latency_ms": 2495.1841251458973,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 205,
+    "output_tokens": 25,
+    "total_tokens": 230
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-001']; retrieved ['doc-001', 'doc-008', 'doc-004']; matched ['doc-001']"
+    }
+  ]
+}

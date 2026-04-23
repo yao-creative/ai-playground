@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-008",
+  "question": "What must be included with an expense claim and when is it due?",
+  "category": "multi_fact",
+  "expected_answer_notes": "Answer should mention receipts and submission within 30 days of purchase.",
+  "gold_doc_ids": [
+    "doc-003"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-003",
+      "title": "Expense Reimbursement Rules",
+      "category": "finance",
+      "text": "Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.",
+      "rank": 1,
+      "score": 1.9861788749694824
+    },
+    {
+      "id": "doc-004",
+      "title": "Laptop Replacement Standard",
+      "category": "it",
+      "text": "Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.",
+      "rank": 2,
+      "score": 1.8557991981506348
+    },
+    {
+      "id": "doc-001",
+      "title": "Remote Work Policy",
+      "category": "hr",
+      "text": "Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.",
+      "rank": 3,
+      "score": 1.2258514165878296
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-003] Expense Reimbursement Rules (finance): Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.\n- [doc-004] Laptop Replacement Standard (it): Engineering laptops are eligible for replacement every 36 months. Early replacement is permitted for repeated hardware failures, battery health below 70 percent, or inability to run required local development tooling.\n- [doc-001] Remote Work Policy (hr): Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.\nQuestion: What must be included with an expense claim and when is it due?\nAnswer:",
+  "answer": "Expense claims must include receipts and be submitted within 30 days of purchase.",
+  "latency_ms": 1480.1640829537064,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 220,
+    "output_tokens": 19,
+    "total_tokens": 239
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-003']; retrieved ['doc-003', 'doc-004', 'doc-001']; matched ['doc-003']"
+    }
+  ]
+}

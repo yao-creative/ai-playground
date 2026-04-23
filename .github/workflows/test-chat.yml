@@ -32,5 +32,5 @@ jobs:
           sed -i "s|OPENAI_MODEL=.*|OPENAI_MODEL=${{ secrets.OPENAI_MODEL }}|" .env
           sed -i "s|RUN_LIVE_TESTS=.*|RUN_LIVE_TESTS=${{ secrets.RUN_LIVE_TESTS }}|" .env
 
-      - name: Run test-chat
-        run: make test-chat
+      - name: Run test-01-chat-entrypoints
+        run: make test-01-chat-entrypoints

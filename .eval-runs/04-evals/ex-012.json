@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-012",
+  "question": "How fast do priority enterprise support tickets get a first response?",
+  "category": "direct_lookup",
+  "expected_answer_notes": "Answer should mention one hour during business hours.",
+  "gold_doc_ids": [
+    "doc-006"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-006",
+      "title": "Customer Support SLA",
+      "category": "support",
+      "text": "Priority enterprise tickets receive a first response within one hour during business hours. Standard tickets receive a first response within eight business hours. Bug reports linked to production outages are escalated immediately to engineering.",
+      "rank": 1,
+      "score": 6.755570411682129
+    },
+    {
+      "id": "doc-003",
+      "title": "Expense Reimbursement Rules",
+      "category": "finance",
+      "text": "Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.",
+      "rank": 2,
+      "score": 1.0281391143798828
+    },
+    {
+      "id": "doc-008",
+      "title": "Data Retention Policy",
+      "category": "security",
+      "text": "Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.",
+      "rank": 3,
+      "score": 0.6999810338020325
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-006] Customer Support SLA (support): Priority enterprise tickets receive a first response within one hour during business hours. Standard tickets receive a first response within eight business hours. Bug reports linked to production outages are escalated immediately to engineering.\n- [doc-003] Expense Reimbursement Rules (finance): Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.\n- [doc-008] Data Retention Policy (security): Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.\nQuestion: How fast do priority enterprise support tickets get a first response?\nAnswer:",
+  "answer": "Priority enterprise support tickets receive a first response **within one hour during business hours**.",
+  "latency_ms": 1802.8497078921646,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 214,
+    "output_tokens": 21,
+    "total_tokens": 235
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-006']; retrieved ['doc-006', 'doc-003', 'doc-008']; matched ['doc-006']"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-005",
+  "question": "When should a long leave request be submitted?",
+  "category": "paraphrase",
+  "expected_answer_notes": "Answer should mention requests longer than five consecutive working days should be submitted at least two weeks in advance.",
+  "gold_doc_ids": [
+    "doc-002"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-002",
+      "title": "Annual Leave Guidelines",
+      "category": "hr",
+      "text": "Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.",
+      "rank": 1,
+      "score": 3.0616228580474854
+    },
+    {
+      "id": "doc-011",
+      "title": "Hiring Interview Rubric",
+      "category": "recruiting",
+      "text": "Interviewers score candidates across problem solving, communication, technical depth, and role alignment on a scale from 1 to 4. Written feedback should be submitted within 24 hours and must include at least two evidence-based observations.",
+      "rank": 2,
+      "score": 1.7132477760314941
+    },
+    {
+      "id": "doc-003",
+      "title": "Expense Reimbursement Rules",
+      "category": "finance",
+      "text": "Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.",
+      "rank": 3,
+      "score": 1.0330352783203125
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-002] Annual Leave Guidelines (hr): Full-time employees receive 18 days of annual leave each calendar year. Leave requests longer than five consecutive working days should be submitted at least two weeks in advance. Unused leave may be carried forward up to five days into the next year.\n- [doc-011] Hiring Interview Rubric (recruiting): Interviewers score candidates across problem solving, communication, technical depth, and role alignment on a scale from 1 to 4. Written feedback should be submitted within 24 hours and must include at least two evidence-based observations.\n- [doc-003] Expense Reimbursement Rules (finance): Meals under 40 USD do not require pre-approval. Hotel bookings above 180 USD per night require director approval unless travel occurs during a peak event period. Expense claims must include receipts and be submitted within 30 days of purchase.\nQuestion: When should a long leave request be submitted?\nAnswer:",
+  "answer": "Leave requests longer than five consecutive working days should be submitted at least two weeks in advance.",
+  "latency_ms": 1467.9742089938372,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 232,
+    "output_tokens": 22,
+    "total_tokens": 254
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": true,
+      "score": 1.0,
+      "comment": "expected one of ['doc-002']; retrieved ['doc-002', 'doc-011', 'doc-003']; matched ['doc-002']"
+    }
+  ]
+}

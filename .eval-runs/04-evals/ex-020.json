@@ -1,0 +1,52 @@
+{
+  "example_id": "ex-020",
+  "question": "What does the travel policy say about economy flights to Singapore?",
+  "category": "unsupported",
+  "expected_answer_notes": "This is unsupported by the corpus and should become a refusal eval later.",
+  "gold_doc_ids": [
+    "doc-003"
+  ],
+  "retrieved_docs": [
+    {
+      "id": "doc-009",
+      "title": "Engineering On-Call Expectations",
+      "category": "engineering",
+      "text": "Primary on-call engineers must acknowledge pager alerts within 10 minutes and begin triage within 15 minutes. If no acknowledgment occurs, the alert escalates automatically to the secondary on-call engineer and then to the engineering manager.",
+      "rank": 1,
+      "score": 1.0899699926376343
+    },
+    {
+      "id": "doc-001",
+      "title": "Remote Work Policy",
+      "category": "hr",
+      "text": "Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.",
+      "rank": 2,
+      "score": 0.9038117527961731
+    },
+    {
+      "id": "doc-008",
+      "title": "Data Retention Policy",
+      "category": "security",
+      "text": "Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.",
+      "rank": 3,
+      "score": 0.8803762793540955
+    }
+  ],
+  "final_prompt": "You are a concise QA assistant for eval exercises. Answer only from the retrieved context. If the context does not support the answer, say that clearly.\nRetrieved context:\n- [doc-009] Engineering On-Call Expectations (engineering): Primary on-call engineers must acknowledge pager alerts within 10 minutes and begin triage within 15 minutes. If no acknowledgment occurs, the alert escalates automatically to the secondary on-call engineer and then to the engineering manager.\n- [doc-001] Remote Work Policy (hr): Employees may work remotely up to three days per week with manager approval. Core collaboration hours are 10:00 to 15:00 local time. Security training must be completed before accessing internal systems from personal networks.\n- [doc-008] Data Retention Policy (security): Application logs are retained for 90 days. Support chat transcripts are retained for 12 months. Deleted customer files remain in backup snapshots for up to 30 days before permanent removal.\nQuestion: What does the travel policy say about economy flights to Singapore?\nAnswer:",
+  "answer": "The retrieved context does not include any travel policy or information about economy flights to Singapore, so I can\u2019t answer this from the provided documents.",
+  "latency_ms": 1351.022999966517,
+  "model": "gpt-5.2-2025-12-11",
+  "usage": {
+    "input_tokens": 217,
+    "output_tokens": 32,
+    "total_tokens": 249
+  },
+  "scorer_results": [
+    {
+      "name": "gold_doc_hit_at_3",
+      "passed": false,
+      "score": 0.0,
+      "comment": "expected one of ['doc-003']; retrieved ['doc-009', 'doc-001', 'doc-008']; matched []"
+    }
+  ]
+}

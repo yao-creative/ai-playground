@@ -21,6 +21,7 @@ This directory is intentionally small. The goal is not to ship a production fram
 - [https://eugeneyan.com/writing/evals/](https://eugeneyan.com/writing/evals/)
 - [https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)
 - [https://www.anthropic.com/engineering/building-effective-agents](https://www.anthropic.com/engineering/building-effective-agents)
+- [https://www.anthropic.com/engineering/managed-agents](https://www.anthropic.com/engineering/managed-agents)
 
 ## Overview
 
@@ -86,6 +87,13 @@ Across the numbered examples, this playground currently includes:
   - appends retrieved context to the prompt
   - streams the answer back to the terminal
   - returns no retrieved docs when embedding similarity is too weak, instead of forcing irrelevant context
+4. `05-agentic-rag/main.py`
+  Features:
+  - single-agent bounded tool loop over the same fixed document corpus
+  - local retrieval tools: search document snippets and read a full document
+  - model chooses when to search, inspect, and finish
+  - grounded answers include cited document ids
+  - unsupported questions end with a clear insufficient-support answer
 
 The current RAG implementation is deliberately simple. That makes it a good place to test changes one variable at a time.
 
@@ -119,6 +127,7 @@ Run the examples from the repo root:
 make run-history
 make run-stream
 make run-rag
+make run-agentic-rag
 ```
 
 To run the RAG app with embedding retrieval explicitly:
@@ -147,6 +156,7 @@ Available test targets:
 make test-01-chat-entrypoints
 make test-03-rag-retrieval
 make test-04-eval-harness
+make test-05-agentic-rag
 make test-all
 RUN_LIVE_TESTS=1 make test-90-live-happy-paths
 ```

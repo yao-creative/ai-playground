@@ -3,3 +3,4 @@
 __pycache__/
 
 .agents/.worktrees/
+.playwright-mcp/

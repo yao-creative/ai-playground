@@ -35,16 +35,33 @@ class FakeResponse:
         self.output_text = output_text
 
 
+class FakeStreamEvent:
+    def __init__(self, event_type: str, delta: str = "", output_text: str = "") -> None:
+        self.type = event_type
+        self.delta = delta
+        self.response = FakeResponse(output_text)
+
+
 class FakeResponsesAPI:
     def __init__(self, outputs: list[str]) -> None:
         self.outputs = list(outputs)
         self.calls: list[dict[str, str]] = []
 
-    def create(self, *, model: str, input: str):
-        self.calls.append({"model": model, "input": input})
+    def create(self, *, model: str, input: str, stream: bool = False):
+        self.calls.append({"model": model, "input": input, "stream": str(stream)})
         if not self.outputs:
             raise AssertionError("No fake response configured for this step.")
-        return FakeResponse(self.outputs.pop(0))
+        output = self.outputs.pop(0)
+
+        if not stream:
+            return FakeResponse(output)
+
+        chunk_size = max(1, len(output) // 3)
+        events = []
+        for index in range(0, len(output), chunk_size):
+            events.append(FakeStreamEvent("response.output_text.delta", delta=output[index : index + chunk_size]))
+        events.append(FakeStreamEvent("response.completed", output_text=output))
+        return events
 
 
 class FakeClient:
@@ -57,16 +74,16 @@ class StubAgent:
         self.answers = list(answers)
         self.calls: list[tuple[str, list[tuple[str, str]]]] = []
 
-    def answer(self, user_input: str, chat_history):
+    def answer_stream(self, user_input: str, chat_history):
         self.calls.append((user_input, list(chat_history)))
-        return self.answers.pop(0)
+        yield agent_module.AgentEvent(event_type="final_result", run_result=self.answers.pop(0))
 
 
 def test_agentic_rag_answers_with_citations() -> None:
     client = FakeClient(
         outputs=[
-            '{"tool_name":"search_documents","arguments":{"query":"remote work days per week","limit":2}}',
-            '{"tool_name":"finish","arguments":{"answer":"Employees may work remotely up to three days per week with manager approval.","cited_doc_ids":["doc-001"],"supported":true}}',
+            'Action: {"tool_name":"search_documents","arguments":{"query":"remote work days per week","limit":2}}',
+            'Final: {"answer":"Employees may work remotely up to three days per week with manager approval.","cited_doc_ids":["doc-001"],"supported":true}',
         ]
     )
     chatbot = agent_module.AgenticRAG(
@@ -78,19 +95,24 @@ def test_agentic_rag_answers_with_citations() -> None:
         ),
     )
 
-    result = chatbot.answer("How many remote days are allowed?")
+    events = list(chatbot.answer_stream("How many remote days are allowed?"))
+    final_events = [event for event in events if event.event_type == "final_result"]
+    assert final_events
+    result = final_events[-1].run_result
+    assert result is not None
 
     assert result.supported is True
     assert result.cited_doc_ids == ["doc-001"]
     assert "three days per week" in result.final_answer
     assert [step.tool_call.tool_name for step in result.steps] == ["search_documents"]
+    assert any(event.event_type == "model_delta" for event in events)
 
 
 def test_agentic_rag_returns_unsupported_when_finish_lacks_citations() -> None:
     client = FakeClient(
         outputs=[
-            '{"tool_name":"search_documents","arguments":{"query":"gym reimbursement","limit":2}}',
-            '{"tool_name":"finish","arguments":{"answer":"The docs do not mention gym reimbursement.","cited_doc_ids":[],"supported":true}}',
+            'Action: {"tool_name":"search_documents","arguments":{"query":"gym reimbursement","limit":2}}',
+            'Final: {"answer":"The docs do not mention gym reimbursement.","cited_doc_ids":[],"supported":true}',
         ]
     )
     chatbot = agent_module.AgenticRAG(
@@ -102,7 +124,11 @@ def test_agentic_rag_returns_unsupported_when_finish_lacks_citations() -> None:
         ),
     )
 
-    result = chatbot.answer("Do we reimburse gym memberships?")
+    events = list(chatbot.answer_stream("Do we reimburse gym memberships?"))
+    final_events = [event for event in events if event.event_type == "final_result"]
+    assert final_events
+    result = final_events[-1].run_result
+    assert result is not None
 
     assert result.supported is False
     assert result.cited_doc_ids == []
@@ -112,8 +138,8 @@ def test_agentic_rag_returns_unsupported_when_finish_lacks_citations() -> None:
 def test_agentic_rag_stops_on_duplicate_tool_calls() -> None:
     client = FakeClient(
         outputs=[
-            '{"tool_name":"search_documents","arguments":{"query":"office access hours","limit":2}}',
-            '{"tool_name":"search_documents","arguments":{"query":"office access hours","limit":2}}',
+            'Action: {"tool_name":"search_documents","arguments":{"query":"office access hours","limit":2}}',
+            'Action: {"tool_name":"search_documents","arguments":{"query":"office access hours","limit":2}}',
         ]
     )
     chatbot = agent_module.AgenticRAG(
@@ -125,11 +151,16 @@ def test_agentic_rag_stops_on_duplicate_tool_calls() -> None:
         ),
     )
 
-    result = chatbot.answer("What time can employees access the office?")
+    events = list(chatbot.answer_stream("What time can employees access the office?"))
+    final_events = [event for event in events if event.event_type == "final_result"]
+    assert final_events
+    result = final_events[-1].run_result
+    assert result is not None
 
     assert result.supported is False
     assert "enough new evidence" in result.final_answer.lower()
     assert len(result.steps) == 1
+    assert any(event.event_type == "step_error" for event in events)
 
 
 def test_terminal_app_prints_sources_for_supported_answers(capsys, monkeypatch) -> None:
@@ -148,6 +179,7 @@ def test_terminal_app_prints_sources_for_supported_answers(capsys, monkeypatch) 
 
     output = capsys.readouterr().out
     assert "AI: Hello! Type 'bye' to exit." in output
+    assert "AI: [Step" not in output
     assert "Sources: doc-010" in output
     assert "AI: Goodbye!" in output
     assert stub_agent.calls[0][0] == "When is the office open?"

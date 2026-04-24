@@ -1,6 +1,6 @@
 # 05 Vanilla Agentic RAG
 
-This module is the smallest step from `03-rag-chat` into agentic RAG.
+This module is the smallest step from `03-rag-chat` into agentic RAG. Using ReAct loop.
 
 The earlier `03` flow always retrieves first, then prompts the model with fixed context.
 This `05` flow lets the model choose the next action inside a bounded loop:
@@ -14,7 +14,7 @@ The implementation stays local and readable:
 
 - fixed in-memory documents inside this section
 - local BM25 or keyword retrieval inside this section
-- one synchronous controller loop
+- one synchronous controller loop with streamed step events
 - no hosted tools
 - no vector store service
 - no eval harness inside this lesson
@@ -32,11 +32,12 @@ sequenceDiagram
     participant OpenAI as OpenAI Responses API
 
     User->>App: Enter question
-    App->>Agent: answer(user_text, chat_history)
+    App->>Agent: answer_stream(user_text, chat_history)
     loop bounded by max_steps
-        Agent->>Agent: build action prompt with prior tool results
-        Agent->>OpenAI: responses.create(model, input=action_prompt)
-        OpenAI-->>Agent: JSON tool call
+        Agent->>Agent: build ReAct prompt with prior observations
+        Agent->>OpenAI: responses.create(model, input=prompt, stream=true)
+        OpenAI-->>Agent: streamed text deltas
+        Agent->>Agent: parse Action/Final envelope
         alt search_documents
             Agent->>Tools: execute(search_documents)
             Tools->>Retriever: retrieve(query, documents, limit)
@@ -52,6 +53,8 @@ sequenceDiagram
     end
     App-->>User: Print answer and cited sources
 ```
+
+
 
 ## Duplicate Call / Weak Evidence Sequence (Mermaid)
 
@@ -76,13 +79,15 @@ sequenceDiagram
     end
 ```
 
+
+
 ## Implementation Notes
 
 - `main.py` is self-contained inside `05` and wires only local `data.py`, `retrieval.py`, `agent.py`, and `terminal_app.py`.
 - `agent.py` is the control plane. It owns:
   - the bounded step loop
-  - the action prompt
-  - JSON parsing
+  - ReAct action/final prompt and parsing
+  - streamed per-step model deltas
   - duplicate-call prevention
   - search retry limits
   - final answer validation
@@ -90,9 +95,9 @@ sequenceDiagram
   - `search_documents(query, limit)`
   - `read_document(doc_id)`
 - `search_documents(...)` returns compact snippets first so the model can decide whether it needs a full document read.
-- `finish(...)` is not a real tool implementation. It is a structured stop signal interpreted inside `agent.py`.
+- `Final: {...}` is not a real tool implementation. It is a structured stop signal interpreted inside `agent.py`.
 - A supported answer is downgraded to unsupported if it does not include at least one cited document id.
-- The chat loop remains synchronous in `terminal_app.py`, which keeps the lesson small and makes each tool step easy to trace mentally.
+- The chat loop remains synchronous in `terminal_app.py`, and now prints each streamed step output plus action/observation logs.
 
 ## Run Notes
 
@@ -113,3 +118,4 @@ Defaults:
 - retrieval strategy: `bm25`
 - step budget: `4`
 - answer style: grounded with doc-id citations when supported
+

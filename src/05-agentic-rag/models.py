@@ -31,6 +31,30 @@ class AgentRunResult:
 
 
 @dataclass(frozen=True)
+class ActionDecision:
+    tool_name: str
+    arguments: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class FinalDecision:
+    answer: str
+    cited_doc_ids: list[str]
+    supported: bool
+
+
+Decision: TypeAlias = ActionDecision | FinalDecision
+
+
+@dataclass(frozen=True)
+class AgentPolicyConfig:
+    max_search_calls: int = 2
+    duplicate_strategy: Literal["always_block", "retry_on_error_only", "allow_one_duplicate"] = (
+        "retry_on_error_only"
+    )
+
+
+@dataclass(frozen=True)
 class StepStartedEvent:
     step_index: int
     event_type: Literal["step_started"] = "step_started"

@@ -163,6 +163,65 @@ def test_agentic_rag_stops_on_duplicate_tool_calls() -> None:
     assert any(event.event_type == "step_error" for event in events)
 
 
+def test_agentic_rag_allows_duplicate_retry_after_tool_error() -> None:
+    client = FakeClient(
+        outputs=[
+            'Action: {"tool_name":"read_document","arguments":{"doc_id":"doc-999"}}',
+            'Action: {"tool_name":"read_document","arguments":{"doc_id":"doc-999"}}',
+            'Final: {"answer":"The document could not be found.","cited_doc_ids":[],"supported":false}',
+        ]
+    )
+    chatbot = agent_module.AgenticRAG(
+        client=client,
+        model="gpt-5-mini",
+        documents=rag05_data_module.build_documents(),
+        retrieval_strategy=rag05_retrieval_module.KeywordRetrievalStrategy(
+            main_module.TiktokenTokenizer("gpt-5-mini")
+        ),
+    )
+
+    events = list(chatbot.answer_stream("Read doc-999."))
+    final_events = [event for event in events if event.event_type == "final_result"]
+    assert final_events
+    result = final_events[-1].run_result
+    assert result is not None
+
+    assert result.supported is False
+    assert result.final_answer == "The document could not be found."
+    assert len(result.steps) == 2
+    assert all(step.tool_result.error for step in result.steps)
+    assert not any(event.event_type == "step_error" for event in events)
+
+
+def test_agentic_rag_stops_on_invalid_tool_arguments() -> None:
+    client = FakeClient(
+        outputs=[
+            'Action: {"tool_name":"search_documents","arguments":{"limit":"abc"}}',
+        ]
+    )
+    chatbot = agent_module.AgenticRAG(
+        client=client,
+        model="gpt-5-mini",
+        documents=rag05_data_module.build_documents(),
+        retrieval_strategy=rag05_retrieval_module.KeywordRetrievalStrategy(
+            main_module.TiktokenTokenizer("gpt-5-mini")
+        ),
+    )
+
+    events = list(chatbot.answer_stream("Search for office access hours."))
+    final_events = [event for event in events if event.event_type == "final_result"]
+    assert final_events
+    result = final_events[-1].run_result
+    assert result is not None
+
+    assert result.supported is False
+    assert result.final_answer == "I could not execute the requested tool call safely."
+    assert len(result.steps) == 0
+    step_errors = [event for event in events if event.event_type == "step_error"]
+    assert step_errors
+    assert "requires non-empty string argument 'query'" in step_errors[-1].message
+
+
 def test_terminal_app_prints_sources_for_supported_answers(capsys, monkeypatch) -> None:
     answer = agent_module.AgentRunResult(
         final_answer="Employees may access the office from 07:00 to 22:00 using their badge.",

@@ -2,7 +2,18 @@ import json
 from collections.abc import Generator, Iterable
 from typing import Any
 
-from models import AgentEvent, AgentRunResult, AgentStep, ToolCall
+from models import (
+    ActionSelectedEvent,
+    AgentEvent,
+    AgentRunResult,
+    AgentStep,
+    FinalResultEvent,
+    ModelDeltaEvent,
+    ObservationEvent,
+    StepErrorEvent,
+    StepStartedEvent,
+    ToolCall,
+)
 from tools import DocumentTools
 
 
@@ -32,14 +43,14 @@ Do not output anything else."""
 
     def answer_stream(
         self, user_input: str, chat_history: list[tuple[str, str]] | None = None
-    ) -> Iterable[AgentEvent]:
+    ) -> Generator[AgentEvent, None, None]:
         history = chat_history or []
         steps: list[AgentStep] = []
         prior_calls: set[str] = set()
         search_count = 0
 
         for step_index in range(1, self.max_steps + 1):
-            yield AgentEvent(event_type="step_started", step_index=step_index)
+            yield StepStartedEvent(step_index=step_index)
             tool_call = yield from self._decide_next_action(
                 user_input=user_input,
                 chat_history=history,
@@ -50,13 +61,12 @@ Do not output anything else."""
 
             if tool_call.tool_name == "finish":
                 result = self._build_finish_result(tool_call, steps)
-                yield AgentEvent(event_type="final_result", run_result=result)
+                yield FinalResultEvent(run_result=result)
                 return
 
             normalized_call = self._normalize_tool_call(tool_call)
             if normalized_call in prior_calls:
-                yield AgentEvent(
-                    event_type="step_error",
+                yield StepErrorEvent(
                     step_index=step_index,
                     message="Repeated tool call detected; no new evidence available.",
                 )
@@ -64,15 +74,14 @@ Do not output anything else."""
                     "I do not have enough new evidence from the docs to answer confidently.",
                     steps,
                 )
-                yield AgentEvent(event_type="final_result", run_result=result)
+                yield FinalResultEvent(run_result=result)
                 return
             prior_calls.add(normalized_call)
 
             if tool_call.tool_name == "search_documents":
                 search_count += 1
                 if search_count > 2:
-                    yield AgentEvent(
-                        event_type="step_error",
+                    yield StepErrorEvent(
                         step_index=step_index,
                         message="Search limit exceeded before finding strong evidence.",
                     )
@@ -80,12 +89,12 @@ Do not output anything else."""
                         "I could not find enough support in the docs after searching twice.",
                         steps,
                     )
-                    yield AgentEvent(event_type="final_result", run_result=result)
+                    yield FinalResultEvent(run_result=result)
                     return
 
-            yield AgentEvent(event_type="action_selected", step_index=step_index, tool_call=tool_call)
+            yield ActionSelectedEvent(step_index=step_index, tool_call=tool_call)
             tool_result = self.tools.execute(tool_call)
-            yield AgentEvent(event_type="observation", step_index=step_index, tool_result=tool_result)
+            yield ObservationEvent(step_index=step_index, tool_result=tool_result)
             steps.append(
                 AgentStep(
                     step_index=step_index,
@@ -95,8 +104,7 @@ Do not output anything else."""
             )
 
             if tool_result.error and step_index == self.max_steps:
-                yield AgentEvent(
-                    event_type="step_error",
+                yield StepErrorEvent(
                     step_index=step_index,
                     message="Document lookup failed on the final step.",
                 )
@@ -104,14 +112,14 @@ Do not output anything else."""
                     "I hit a document lookup error and do not have enough support to answer safely.",
                     steps,
                 )
-                yield AgentEvent(event_type="final_result", run_result=result)
+                yield FinalResultEvent(run_result=result)
                 return
 
         result = self._fallback_result(
             "I do not have enough support in the docs to answer confidently.",
             steps,
         )
-        yield AgentEvent(event_type="final_result", run_result=result)
+        yield FinalResultEvent(run_result=result)
 
     def _decide_next_action(
         self,
@@ -137,7 +145,7 @@ Do not output anything else."""
                 delta = str(getattr(event, "delta", ""))
                 if delta:
                     chunks.append(delta)
-                    yield AgentEvent(event_type="model_delta", step_index=step_index, delta=delta)
+                    yield ModelDeltaEvent(step_index=step_index, delta=delta)
             if getattr(event, "type", "") == "response.completed":
                 completed_response = getattr(event, "response", None)
                 completed_text = str(getattr(completed_response, "output_text", "")).strip()

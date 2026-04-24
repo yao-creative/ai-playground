@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 
 @dataclass(frozen=True)
@@ -31,18 +31,50 @@ class AgentRunResult:
 
 
 @dataclass(frozen=True)
-class AgentEvent:
-    event_type: Literal[
-        "step_started",
-        "model_delta",
-        "action_selected",
-        "observation",
-        "step_error",
-        "final_result",
-    ]
-    step_index: int | None = None
-    delta: str | None = None
-    tool_call: ToolCall | None = None
-    tool_result: ToolResult | None = None
-    message: str | None = None
-    run_result: AgentRunResult | None = None
+class StepStartedEvent:
+    step_index: int
+    event_type: Literal["step_started"] = "step_started"
+
+
+@dataclass(frozen=True)
+class ModelDeltaEvent:
+    step_index: int
+    delta: str
+    event_type: Literal["model_delta"] = "model_delta"
+
+
+@dataclass(frozen=True)
+class ActionSelectedEvent:
+    step_index: int
+    tool_call: ToolCall
+    event_type: Literal["action_selected"] = "action_selected"
+
+
+@dataclass(frozen=True)
+class ObservationEvent:
+    step_index: int
+    tool_result: ToolResult
+    event_type: Literal["observation"] = "observation"
+
+
+@dataclass(frozen=True)
+class StepErrorEvent:
+    step_index: int
+    message: str
+    event_type: Literal["step_error"] = "step_error"
+
+
+@dataclass(frozen=True)
+class FinalResultEvent:
+    run_result: AgentRunResult
+    event_type: Literal["final_result"] = "final_result"
+
+
+AgentEvent: TypeAlias = (
+    StepStartedEvent
+    | ModelDeltaEvent
+    | ActionSelectedEvent
+    | ObservationEvent
+    | StepErrorEvent
+    | FinalResultEvent
+)

@@ -76,7 +76,7 @@ class StubAgent:
 
     def answer_stream(self, user_input: str, chat_history):
         self.calls.append((user_input, list(chat_history)))
-        yield agent_module.AgentEvent(event_type="final_result", run_result=self.answers.pop(0))
+        yield agent_module.FinalResultEvent(run_result=self.answers.pop(0))
 
 
 def test_agentic_rag_answers_with_citations() -> None:

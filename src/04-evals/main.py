@@ -71,21 +71,22 @@ async def run_example_with_semaphore(
 
 async def run_all_examples(examples, documents, retriever, answerer, scorers, settings) -> list[RunRecord]:
     semaphore = asyncio.Semaphore(settings.max_concurrency)
-    tasks = [
-        asyncio.create_task(
-            run_example_with_semaphore(
-                semaphore,
-                example,
-                documents,
-                retriever,
-                answerer,
-                scorers,
-                settings,
+    tasks = []
+    async with asyncio.TaskGroup() as task_group:
+        for example in examples:
+            task = task_group.create_task(
+                run_example_with_semaphore(
+                    semaphore,
+                    example,
+                    documents,
+                    retriever,
+                    answerer,
+                    scorers,
+                    settings,
+                )
             )
-        )
-        for example in examples
-    ]
-    return await asyncio.gather(*tasks)
+            tasks.append(task)
+    return [task.result() for task in tasks]
 
 
 def main() -> int:

@@ -4,7 +4,7 @@ Minimal BIGPATENT loader for local experimentation.
 
 ## What it does
 
-- loads a small in-memory slice from `NortheasternUniversity/big_patent`
+- loads a deterministic in-memory slice from `NortheasternUniversity/big_patent`
 - normalizes each row into:
   - `id`
   - `config`
@@ -12,7 +12,10 @@ Minimal BIGPATENT loader for local experimentation.
   - `abstract`
   - `description`
   - `text` (`abstract + "\n\n" + description`)
+- exposes `iter_patent_records(...)` as the primary loading interface
+- keeps `load_patent_records(...)` as compatibility wrapper
 - supports `preview`, `stats`, and `jsonl` output modes
+- writes JSONL export metadata sidecar (`*.meta.json`) in `jsonl` mode
 
 ## Sequence diagram
 
@@ -27,7 +30,7 @@ sequenceDiagram
     participant FS as Filesystem (optional)
 
     User->>CLI: run with args (--config --split --limit --mode ...)
-    CLI->>Loader: load_patent_records(config, split, limit, min_chars)
+    CLI->>Loader: iter_patent_records(config, split, limit, min_chars)
 
     Loader->>HF: get_dataset_config_names(DATASET_NAME)
     HF-->>Loader: configs
@@ -42,7 +45,7 @@ sequenceDiagram
         Domain-->>Loader: record
     end
 
-    Loader-->>CLI: list[PatentRecord]
+    Loader-->>CLI: Iterator[PatentRecord]
 
     alt mode=preview
         CLI->>CLI: print first N records as JSON
@@ -50,11 +53,19 @@ sequenceDiagram
         CLI->>CLI: compute rows + avg_text_chars
         CLI-->>User: print stats
     else mode=jsonl
-        CLI->>FS: write JSONL via write_jsonl(...)
+        CLI->>FS: stream-write JSONL
+        CLI->>FS: write *.meta.json sidecar
         FS-->>CLI: done
         CLI-->>User: wrote N rows
     end
 ```
+
+## Default demo preset
+
+- `config=all`
+- `split=train`
+- `limit=10000`
+- `min_chars=1`
 
 ## Example usage
 
@@ -83,12 +94,11 @@ Write JSONL:
 
 ```bash
 uv run python src/06-big-patent-app/main.py \
-  --config all \
-  --split train \
-  --limit 100 \
   --mode jsonl \
   --out data/big_patent_v0_sample.jsonl
 ```
+
+The command also writes `data/big_patent_v0_sample.jsonl.meta.json`.
 
 ## Notes
 
@@ -120,41 +130,46 @@ uv run python src/06-big-patent-app/main.py \
 
 The idea is to keep downstream code calling one iterator interface while the backend changes.
 
-In v0, `iter_patent_records` just calls `load_patent_records` and yields the list:
+In v0, `load_patent_records` wraps `iter_patent_records` and materializes a list:
 
 ```python
-def iter_patent_records(config="all", split="train", limit=1000, min_chars=1):
-    rows = load_patent_records(
-        config=config,
-        split=split,
-        limit=limit,
-        min_chars=min_chars,
+def load_patent_records(config="all", split="train", limit=10000, min_chars=1):
+    return list(
+        iter_patent_records(
+            config=config,
+            split=split,
+            limit=limit,
+            min_chars=min_chars,
+        )
     )
-    for row in rows:
-        yield row
 ```
 
-Later, the same function name can switch to streaming without changing callers.
+Primary interface:
 
-## What streaming solves
+```python
+def iter_patent_records(config="all", split="train", limit=10000, min_chars=1):
+    ...
+```
 
-- avoids loading large splits fully into memory
-- allows full-corpus processing (millions of rows) in one pass
-- improves robustness for long jobs when combined with checkpoints
-- reduces startup latency for pipeline-style ingestion jobs
+Compatibility wrapper:
 
-Streaming mainly solves scale and reliability issues, not model quality by itself.
+```python
+def load_patent_records(config="all", split="train", limit=10000, min_chars=1):
+    return list(iter_patent_records(...))
+```
+
+Later, `iter_patent_records` can switch to streaming without changing callers.
 
 ## Streaming integration point and usage
 
-The integration point is the loader interface (`iter_patent_records`), not the CLI output code.
+The integration point is still the loader interface (`iter_patent_records`), not the CLI output code.
 
 Keep `main.py` consuming an iterator, then swap the loader implementation:
 
 ```python
 from datasets import load_dataset
 
-def iter_patent_records(config="all", split="train", min_chars=1):
+def iter_patent_records(config="all", split="train", limit=10000, min_chars=1):
     ds = load_dataset(
         "NortheasternUniversity/big_patent",
         name=config,
@@ -162,22 +177,9 @@ def iter_patent_records(config="all", split="train", min_chars=1):
         streaming=True,
     )
     for index, row in enumerate(ds):
-        abstract = (row.get("abstract") or "").strip()
-        description = (row.get("description") or "").strip()
-        text = f"{abstract}\n\n{description}".strip()
-        if len(text) < min_chars:
-            continue
-        yield PatentRecord(
-            id=f"{config}:{split}:{index}",
-            config=config,
-            split=split,
-            abstract=abstract,
-            description=description,
-            text=text,
-        )
+        ...
+        yield PatentRecord(...)
 ```
-
-Any consumer (preview/stats/jsonl/embed/index) can keep using the same iterator contract.
 
 ## Where data is saved
 
@@ -186,6 +188,7 @@ There are two different storage locations:
 1. Your app output file (JSONL export):
    - controlled by `--out`
    - current example: `data/big_patent_v0_sample.jsonl`
+   - metadata sidecar: `data/big_patent_v0_sample.jsonl.meta.json`
    - in the Make target, default is also `data/big_patent_v0_sample.jsonl`
 2. Hugging Face dataset cache files:
    - managed by the `datasets` library

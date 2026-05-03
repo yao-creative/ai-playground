@@ -1,4 +1,6 @@
 import argparse
+from collections.abc import Iterator
+from datetime import UTC, datetime
 import json
 from pathlib import Path
 import sys
@@ -11,15 +13,40 @@ if str(MODULE_DIR) not in sys.path:
 if str(APP_DIR) not in sys.path:
     sys.path.insert(1, str(APP_DIR))
 
-from loader import load_patent_records
+from domain import PatentRecord
+from loader import (
+    DEFAULT_CONFIG,
+    DEFAULT_LIMIT,
+    DEFAULT_MIN_CHARS,
+    DEFAULT_SPLIT,
+    iter_patent_records,
+)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="BIGPATENT v0 in-memory dataloader")
-    parser.add_argument("--config", default="all", help="Dataset config (default: all)")
-    parser.add_argument("--split", default="train", help="Split name (default: train)")
-    parser.add_argument("--limit", type=int, default=1000, help="Number of rows to load (default: 1000)")
-    parser.add_argument("--min-chars", type=int, default=1, help="Minimum chars in normalized text")
+    parser.add_argument(
+        "--config",
+        default=DEFAULT_CONFIG,
+        help=f"Dataset config (default: {DEFAULT_CONFIG})",
+    )
+    parser.add_argument(
+        "--split",
+        default=DEFAULT_SPLIT,
+        help=f"Split name (default: {DEFAULT_SPLIT})",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=DEFAULT_LIMIT,
+        help=f"Number of rows to load (default: {DEFAULT_LIMIT})",
+    )
+    parser.add_argument(
+        "--min-chars",
+        type=int,
+        default=DEFAULT_MIN_CHARS,
+        help=f"Minimum chars in normalized text (default: {DEFAULT_MIN_CHARS})",
+    )
     parser.add_argument(
         "--mode",
         choices=["preview", "jsonl", "stats"],
@@ -31,38 +58,86 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:
+def export_jsonl(path: Path, records: Iterator[PatentRecord]) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
+    rows_written = 0
     with path.open("w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=True) + "\n")
+        for record in records:
+            handle.write(json.dumps(record.to_dict(), ensure_ascii=True) + "\n")
+            rows_written += 1
+    return rows_written
+
+
+def write_export_metadata(path: Path, *, config: str, split: str, limit: int, min_chars: int, row_count: int) -> Path:
+    metadata_path = path.with_suffix(f"{path.suffix}.meta.json")
+    payload = {
+        "dataset": "NortheasternUniversity/big_patent",
+        "config": config,
+        "split": split,
+        "limit": limit,
+        "min_chars": min_chars,
+        "row_count": row_count,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+    }
+    with metadata_path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=True, indent=2)
+        handle.write("\n")
+    return metadata_path
 
 
 def main() -> None:
     args = parse_args()
-    records = load_patent_records(
-        config=args.config,
-        split=args.split,
-        limit=args.limit,
-        min_chars=args.min_chars,
-    )
-
     if args.mode == "stats":
-        text_lengths = [len(record.text) for record in records]
-        avg_len = (sum(text_lengths) / len(text_lengths)) if text_lengths else 0.0
-        print(f"rows={len(records)}")
+        total_rows = 0
+        total_chars = 0
+        for record in iter_patent_records(
+            config=args.config,
+            split=args.split,
+            limit=args.limit,
+            min_chars=args.min_chars,
+        ):
+            total_rows += 1
+            total_chars += len(record.text)
+        avg_len = (total_chars / total_rows) if total_rows else 0.0
+        print(f"rows={total_rows}")
         print(f"avg_text_chars={avg_len:.2f}")
         return
 
     if args.mode == "jsonl":
         if args.out is None:
             raise ValueError("--out is required when --mode jsonl")
-        write_jsonl(args.out, [record.to_dict() for record in records])
-        print(f"wrote {len(records)} rows to {args.out}")
+        rows_written = export_jsonl(
+            args.out,
+            iter_patent_records(
+                config=args.config,
+                split=args.split,
+                limit=args.limit,
+                min_chars=args.min_chars,
+            ),
+        )
+        metadata_path = write_export_metadata(
+            args.out,
+            config=args.config,
+            split=args.split,
+            limit=args.limit,
+            min_chars=args.min_chars,
+            row_count=rows_written,
+        )
+        print(f"wrote {rows_written} rows to {args.out}")
+        print(f"wrote metadata to {metadata_path}")
         return
 
     preview_count = max(1, args.preview_count)
-    for record in records[:preview_count]:
+    for index, record in enumerate(
+        iter_patent_records(
+            config=args.config,
+            split=args.split,
+            limit=args.limit,
+            min_chars=args.min_chars,
+        )
+    ):
+        if index >= preview_count:
+            break
         print(json.dumps(record.to_dict(), ensure_ascii=True))
 
 

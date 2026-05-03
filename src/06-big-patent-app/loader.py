@@ -1,8 +1,14 @@
+from collections.abc import Iterator
+
 from datasets import get_dataset_config_names, get_dataset_split_names, load_dataset
 
 from domain import PatentRecord
 
 DATASET_NAME = "NortheasternUniversity/big_patent"
+DEFAULT_CONFIG = "all"
+DEFAULT_SPLIT = "train"
+DEFAULT_LIMIT = 10000
+DEFAULT_MIN_CHARS = 1
 
 
 def available_configs() -> list[str]:
@@ -13,13 +19,13 @@ def available_splits(config: str) -> list[str]:
     return list(get_dataset_split_names(DATASET_NAME, config))
 
 
-def load_patent_records(
+def iter_patent_records(
     *,
-    config: str = "all",
-    split: str = "train",
-    limit: int = 1000,
-    min_chars: int = 1,
-) -> list[PatentRecord]:
+    config: str = DEFAULT_CONFIG,
+    split: str = DEFAULT_SPLIT,
+    limit: int = DEFAULT_LIMIT,
+    min_chars: int = DEFAULT_MIN_CHARS,
+) -> Iterator[PatentRecord]:
     if limit < 1:
         raise ValueError(f"limit must be >= 1, got {limit}")
     if min_chars < 0:
@@ -37,7 +43,6 @@ def load_patent_records(
     split_spec = f"{split}[:{limit}]"
     dataset = load_dataset(DATASET_NAME, name=config, split=split_spec, streaming=False)
 
-    records: list[PatentRecord] = []
     for index, row in enumerate(dataset):
         abstract = (row.get("abstract") or "").strip()
         description = (row.get("description") or "").strip()
@@ -45,15 +50,28 @@ def load_patent_records(
         if len(text) < min_chars:
             continue
 
-        records.append(
-            PatentRecord(
-                id=f"{config}:{split}:{index}",
-                config=config,
-                split=split,
-                abstract=abstract,
-                description=description,
-                text=text,
-            )
+        yield PatentRecord(
+            id=f"{config}:{split}:{index}",
+            config=config,
+            split=split,
+            abstract=abstract,
+            description=description,
+            text=text,
         )
 
-    return records
+
+def load_patent_records(
+    *,
+    config: str = DEFAULT_CONFIG,
+    split: str = DEFAULT_SPLIT,
+    limit: int = DEFAULT_LIMIT,
+    min_chars: int = DEFAULT_MIN_CHARS,
+) -> list[PatentRecord]:
+    return list(
+        iter_patent_records(
+            config=config,
+            split=split,
+            limit=limit,
+            min_chars=min_chars,
+        )
+    )

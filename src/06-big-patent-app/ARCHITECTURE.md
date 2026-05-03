@@ -21,12 +21,15 @@ Implication: full-corpus processing should be treated as a pipeline workload, no
 
 ## v0 architecture (current)
 
-- Loader: `load_patent_records(...)` in-memory slice via `datasets.load_dataset(..., streaming=False)`
+- Loader primary interface: `iter_patent_records(...)` in-memory slice via `datasets.load_dataset(..., streaming=False)`
+- Compatibility interface: `load_patent_records(...)` returns `list(iter_patent_records(...))`
 - Record schema: `PatentRecord` with normalized `text = abstract + "\\n\\n" + description`
 - CLI modes:
   - `preview`
   - `stats`
   - `jsonl`
+- Canonical demo preset: `config=all`, `split=train`, `limit=10000`
+- JSONL export writes metadata sidecar `*.meta.json` for reproducibility
 
 This mode is for local development and quick iteration.
 

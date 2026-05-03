@@ -52,4 +52,4 @@ run-big-patent-stats:
 	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-all} --split $${SPLIT:-train} --limit $${LIMIT:-100} --mode stats
 
 run-big-patent-jsonl:
-	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-all} --split $${SPLIT:-train} --limit $${LIMIT:-100} --mode jsonl --out $${OUT:-data/big_patent_v0_sample.jsonl}
+	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-all} --split $${SPLIT:-train} --limit $${LIMIT:-10000} --mode jsonl --out $${OUT:-data/big_patent_v0_sample.jsonl}

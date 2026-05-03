@@ -115,3 +115,79 @@ uv run python src/06-big-patent-app/main.py \
    - `sample_seed` + `sample_rate` for repeatable small experiments without full loads.
 8. Add observability:
    - periodic progress logs (`processed`, `kept`, `filtered`) and elapsed time per 10k rows.
+
+## Why "v0 can wrap load_patent_records"
+
+The idea is to keep downstream code calling one iterator interface while the backend changes.
+
+In v0, `iter_patent_records` just calls `load_patent_records` and yields the list:
+
+```python
+def iter_patent_records(config="all", split="train", limit=1000, min_chars=1):
+    rows = load_patent_records(
+        config=config,
+        split=split,
+        limit=limit,
+        min_chars=min_chars,
+    )
+    for row in rows:
+        yield row
+```
+
+Later, the same function name can switch to streaming without changing callers.
+
+## What streaming solves
+
+- avoids loading large splits fully into memory
+- allows full-corpus processing (millions of rows) in one pass
+- improves robustness for long jobs when combined with checkpoints
+- reduces startup latency for pipeline-style ingestion jobs
+
+Streaming mainly solves scale and reliability issues, not model quality by itself.
+
+## Streaming integration point and usage
+
+The integration point is the loader interface (`iter_patent_records`), not the CLI output code.
+
+Keep `main.py` consuming an iterator, then swap the loader implementation:
+
+```python
+from datasets import load_dataset
+
+def iter_patent_records(config="all", split="train", min_chars=1):
+    ds = load_dataset(
+        "NortheasternUniversity/big_patent",
+        name=config,
+        split=split,
+        streaming=True,
+    )
+    for index, row in enumerate(ds):
+        abstract = (row.get("abstract") or "").strip()
+        description = (row.get("description") or "").strip()
+        text = f"{abstract}\n\n{description}".strip()
+        if len(text) < min_chars:
+            continue
+        yield PatentRecord(
+            id=f"{config}:{split}:{index}",
+            config=config,
+            split=split,
+            abstract=abstract,
+            description=description,
+            text=text,
+        )
+```
+
+Any consumer (preview/stats/jsonl/embed/index) can keep using the same iterator contract.
+
+## Where data is saved
+
+There are two different storage locations:
+
+1. Your app output file (JSONL export):
+   - controlled by `--out`
+   - current example: `data/big_patent_v0_sample.jsonl`
+   - in the Make target, default is also `data/big_patent_v0_sample.jsonl`
+2. Hugging Face dataset cache files:
+   - managed by the `datasets` library
+   - default location is your local HF cache directory (for example under `~/.cache/huggingface`)
+   - can be redirected with HF cache environment variables when needed

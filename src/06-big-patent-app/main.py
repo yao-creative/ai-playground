@@ -19,16 +19,17 @@ from loader import (
     DEFAULT_LIMIT,
     DEFAULT_MIN_CHARS,
     DEFAULT_SPLIT,
+    dataset_id,
     iter_patent_records,
 )
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="BIGPATENT v0 in-memory dataloader")
+    parser = argparse.ArgumentParser(description="PatenTEB v0 in-memory dataloader")
     parser.add_argument(
         "--config",
         default=DEFAULT_CONFIG,
-        help=f"Dataset config (default: {DEFAULT_CONFIG})",
+        help=f"PatenTEB task config (default: {DEFAULT_CONFIG})",
     )
     parser.add_argument(
         "--split",
@@ -71,7 +72,7 @@ def export_jsonl(path: Path, records: Iterator[PatentRecord]) -> int:
 def write_export_metadata(path: Path, *, config: str, split: str, limit: int, min_chars: int, row_count: int) -> Path:
     metadata_path = path.with_suffix(f"{path.suffix}.meta.json")
     payload = {
-        "dataset": "NortheasternUniversity/big_patent",
+        "dataset": dataset_id(config),
         "config": config,
         "split": split,
         "limit": limit,

@@ -46,10 +46,10 @@ run-evals:
 	uv run src/04-evals/main.py
 
 run-big-patent-preview:
-	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-all} --split $${SPLIT:-train} --limit $${LIMIT:-20} --mode preview --preview-count $${PREVIEW_COUNT:-3}
+	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-retrieval_IN} --split $${SPLIT:-test} --limit $${LIMIT:-20} --mode preview --preview-count $${PREVIEW_COUNT:-3}
 
 run-big-patent-stats:
-	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-all} --split $${SPLIT:-train} --limit $${LIMIT:-100} --mode stats
+	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-retrieval_IN} --split $${SPLIT:-test} --limit $${LIMIT:-100} --mode stats
 
 run-big-patent-jsonl:
-	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-all} --split $${SPLIT:-train} --limit $${LIMIT:-10000} --mode jsonl --out $${OUT:-data/big_patent_v0_sample.jsonl}
+	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-retrieval_IN} --split $${SPLIT:-test} --limit $${LIMIT:-1000} --mode jsonl --out $${OUT:-data/big_patent_v0_sample.jsonl}

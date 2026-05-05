@@ -1,7 +1,7 @@
 PYTHON := uv run python
 PYTEST := uv run pytest
 
-.PHONY: test test-all test-chat test-rag test-evals test-01-chat-entrypoints test-03-rag-retrieval test-04-eval-harness test-05-agentic-rag test-90-live-happy-paths test-live-happy-paths run-history run-stream run-rag run-agentic-rag run-evals
+.PHONY: test test-all test-chat test-rag test-evals test-01-chat-entrypoints test-03-rag-retrieval test-04-eval-harness test-05-agentic-rag test-90-live-happy-paths test-live-happy-paths run-history run-stream run-rag run-agentic-rag run-evals run-big-patent-preview run-big-patent-stats run-big-patent-jsonl
 
 test: test-all
 
@@ -44,3 +44,12 @@ run-agentic-rag:
 
 run-evals:
 	uv run src/04-evals/main.py
+
+run-big-patent-preview:
+	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-retrieval_IN} --split $${SPLIT:-test} --limit $${LIMIT:-20} --mode preview --preview-count $${PREVIEW_COUNT:-3}
+
+run-big-patent-stats:
+	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-retrieval_IN} --split $${SPLIT:-test} --limit $${LIMIT:-100} --mode stats
+
+run-big-patent-jsonl:
+	uv run python src/06-big-patent-app/main.py --config $${CONFIG:-retrieval_IN} --split $${SPLIT:-test} --limit $${LIMIT:-1000} --mode jsonl --out $${OUT:-data/big_patent_v0_sample.jsonl}

@@ -44,14 +44,10 @@ The numbering is intentional:
   - Keyword (Full text search. Jaccard)
 - `04` Eval Harnesses
 - `05` Agentic RAG
-- `06` Queue-Pair, PQ/ EQ for async message 
-  - (Tool calls)
-  - User request Registration
-  - Evals to DB?
-- `07` Session management
-- `08` Real vector store/ management
+- `06` Agentic Planning (Plan -> Draft -> Review -> Redraft)
+- `07` Big Patent App
 
-`09` Semantic IDs + Generative Recommendation Systems
+`08+` Future experiments
 
 ## Features
 
@@ -94,6 +90,12 @@ Across the numbered examples, this playground currently includes:
   - model chooses when to search, inspect, and finish
   - grounded answers include cited document ids
   - unsupported questions end with a clear insufficient-support answer
+5. `06-agentic-planning/main.py`
+  Features:
+  - standalone modular pipeline: evidence collection, planner, drafter, reviewer, redrafter
+  - one-pass redraft loop with reviewer gate before finalization
+  - grounded-answer invariant: supported answers must include citations
+  - fallback to unsupported response when review fails after redraft budget
 
 The current RAG implementation is deliberately simple. That makes it a good place to test changes one variable at a time.
 
@@ -128,6 +130,7 @@ make run-history
 make run-stream
 make run-rag
 make run-agentic-rag
+make run-agentic-planning
 ```
 
 To run the RAG app with embedding retrieval explicitly:
@@ -157,6 +160,7 @@ make test-01-chat-entrypoints
 make test-03-rag-retrieval
 make test-04-eval-harness
 make test-05-agentic-rag
+make test-06-agentic-planning
 make test-all
 RUN_LIVE_TESTS=1 make test-90-live-happy-paths
 ```

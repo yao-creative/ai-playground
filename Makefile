@@ -1,11 +1,11 @@
 PYTHON := uv run python
 PYTEST := uv run pytest
 
-.PHONY: test test-all test-chat test-rag test-evals test-01-chat-entrypoints test-03-rag-retrieval test-04-eval-harness test-05-agentic-rag test-90-live-happy-paths test-live-happy-paths run-history run-stream run-rag run-agentic-rag run-evals run-big-patent-preview run-big-patent-stats run-big-patent-jsonl
+.PHONY: test test-all test-chat test-rag test-evals test-01-chat-entrypoints test-03-rag-retrieval test-04-eval-harness test-05-agentic-rag test-06-agentic-planning test-90-live-happy-paths test-live-happy-paths run-history run-stream run-rag run-agentic-rag run-agentic-planning run-evals run-big-patent-preview run-big-patent-stats run-big-patent-jsonl
 
 test: test-all
 
-test-all: test-01-chat-entrypoints test-03-rag-retrieval test-04-eval-harness test-05-agentic-rag
+test-all: test-01-chat-entrypoints test-03-rag-retrieval test-04-eval-harness test-05-agentic-rag test-06-agentic-planning
 
 test-01-chat-entrypoints:
 	$(PYTEST) tests/test_ai_chat_entrypoints.py
@@ -25,6 +25,9 @@ test-evals: test-04-eval-harness
 test-05-agentic-rag:
 	$(PYTEST) tests/test_agentic_rag.py
 
+test-06-agentic-planning:
+	$(PYTEST) tests/test_agentic_planning.py
+
 test-90-live-happy-paths:
 	$(PYTEST) tests/e2e/test_live_happy_paths.py
 
@@ -41,6 +44,9 @@ run-rag:
 
 run-agentic-rag:
 	uv run src/05-agentic-rag/main.py
+
+run-agentic-planning:
+	uv run src/06-agentic-planning/main.py
 
 run-evals:
 	uv run src/04-evals/main.py

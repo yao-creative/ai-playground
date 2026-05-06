@@ -125,7 +125,7 @@ Do not output anything else."""
             if self._should_block_tool_call(tool_call, policy_state):
                 return steps, True
 
-            tool_result = self.tools.execute(tool_call)
+            tool_result = self.tools.execute(tool_call)d
             steps.append(AgentStep(step_index=step_index, tool_call=tool_call, tool_result=tool_result))
             self._record_call_outcome(tool_call=tool_call, error=tool_result.error, policy_state=policy_state)
 

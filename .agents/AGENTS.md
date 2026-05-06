@@ -8,3 +8,5 @@
 - Cross-section imports between `src/01-*`, `src/02-*`, `src/03-*`, and later sections should be treated as a design violation unless explicitly approved.
 - If a section needs to evolve past an earlier one, prefer copying and adapting the earlier implementation over reaching back into it.
 - Tests for a section should follow the same rule: they may import that section and shared `src/config.py`, but should not depend on runtime modules from other numbered sections.
+
+- Always give me a 3 line critique of my code changes and design decisions as if I were to be a top engineer and a 3 line summary of what I should do next.

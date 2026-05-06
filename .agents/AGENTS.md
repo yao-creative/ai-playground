@@ -9,4 +9,4 @@
 - If a section needs to evolve past an earlier one, prefer copying and adapting the earlier implementation over reaching back into it.
 - Tests for a section should follow the same rule: they may import that section and shared `src/config.py`, but should not depend on runtime modules from other numbered sections.
 
-- Always give me a 3 line critique of my current code and design decisions as if I were to be a top engineer and a 3 line summary of what I should do next. I'd like guidance which are specific design decisions, not line-by-line nitpicks.
+- Always give me a 3 line critique of my current code and design decisions as if I were to be a top engineer and a 3 line summary of what I should do next based on what frontier companies do in 2026. I'd like guidance which are specific design decisions, not line-by-line nitpicks.

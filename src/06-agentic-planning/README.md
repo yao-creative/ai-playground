@@ -8,8 +8,8 @@ Flow per turn:
 2. Draft a plan spec from that evidence.
 3. Show the plan spec to the user.
 4. Stay in the plan loop until the user:
-   - accepts the plan
-   - gives feedback to redraft the plan
+   - chooses `accept`
+   - chooses `redraft`, then gives feedback
    - exits the plan loop
 5. If accepted, execute the accepted plan immediately and print the grounded answer.
 
@@ -47,7 +47,9 @@ sequenceDiagram
     App-->>User: Print plan spec
 
     loop until user decides
-        alt user gives feedback
+        alt user chooses redraft
+            App-->>User: ask for redraft feedback
+            User->>App: send feedback
             App->>Orch: redraft_plan(session, feedback)
             Orch->>OpenAI: PlanRedrafter.run(...)
             OpenAI-->>Orch: revised PlanResult JSON
@@ -77,5 +79,6 @@ sequenceDiagram
 ## Notes
 
 - Evidence is collected once per planning session and reused across plan redrafts.
+- After a plan is shown, the terminal app requires an explicit `accept`, `redraft`, or `exit plan` choice before it interprets free-form text.
 - Supported answers still require citations.
 - `--max-redrafts` has been removed; the user controls the loop explicitly.

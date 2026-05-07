@@ -146,7 +146,7 @@ def test_prepare_plan_returns_safe_fallback_when_evidence_collection_blocks() ->
     assert result.final_answer == "I do not have enough supported evidence to answer confidently."
 
 
-def test_terminal_app_routes_feedback_accept_and_exit() -> None:
+def test_terminal_app_routes_accept_redraft_and_exit() -> None:
     _, chatbot = build_chatbot(
         outputs=[
             'Action: {"tool_name":"search_documents","arguments":{"query":"remote work days per week","limit":2}}',
@@ -163,17 +163,29 @@ def test_terminal_app_routes_feedback_accept_and_exit() -> None:
 
     plan_1 = app.handle_input("How many remote days are allowed?")
     assert "Plan Spec:" in plan_1
+    assert "Options:" in plan_1
     assert app.active_session is not None
+
+    invalid_choice = app.handle_input("Make it more explicit about the exact day count.")
+    assert invalid_choice == "Choose one option: accept, redraft, or exit plan."
+    assert app.awaiting_redraft_feedback is False
+    assert app.active_session is not None
+
+    redraft_prompt = app.handle_input("redraft")
+    assert redraft_prompt == "Redraft selected. Reply with the plan changes you want."
+    assert app.awaiting_redraft_feedback is True
 
     plan_2 = app.handle_input("Make it more explicit about the exact day count.")
     assert "Revision: 1" in plan_2
     assert "cite exact limit" in plan_2
+    assert app.awaiting_redraft_feedback is False
     assert app.active_session is not None
 
     answer = app.handle_input("accept")
     assert "three days per week" in answer
     assert "Sources: doc-001" in answer
     assert app.active_session is None
+    assert app.awaiting_redraft_feedback is False
 
     plan_3 = app.handle_input("What time can employees access the office?")
     assert "Plan Spec:" in plan_3
@@ -182,6 +194,7 @@ def test_terminal_app_routes_feedback_accept_and_exit() -> None:
     exit_message = app.handle_input("exit plan")
     assert exit_message == "Plan loop exited. No answer drafted for this turn."
     assert app.active_session is None
+    assert app.awaiting_redraft_feedback is False
 
 
 def test_build_app_accepts_max_steps_only(monkeypatch) -> None:

@@ -4,12 +4,14 @@ from models import AgentRunResult, PlanningSession
 
 class TerminalChatApp:
     ACCEPT_PLAN_TOKENS = {"accept", "approve", "approved", "looks good", "proceed"}
+    REDRAFT_PLAN_TOKENS = {"redraft", "revise", "edit plan"}
     EXIT_PLAN_TOKENS = {"exit plan", "cancel", "stop planning"}
 
     def __init__(self, chatbot: AgenticPlanningOrchestrator) -> None:
         self.chatbot = chatbot
         self.chat_history: list[tuple[str, str]] = []
         self.active_session: PlanningSession | None = None
+        self.awaiting_redraft_feedback = False
 
     def run(self) -> None:
         print("AI: Hello! Type 'bye' to exit.")
@@ -54,23 +56,37 @@ class TerminalChatApp:
         assert self.active_session is not None
         self.chat_history.append(("User", user_text))
 
+        if self.awaiting_redraft_feedback:
+            self.awaiting_redraft_feedback = False
+            self.active_session = self.chatbot.redraft_plan(self.active_session, user_text)
+            plan_text = self._format_plan(self.active_session)
+            self.chat_history.append(("Assistant", plan_text))
+            return plan_text
+
         if self._is_accept_intent(user_text):
             result = self.chatbot.execute_accepted_plan(self.active_session)
             self.active_session = None
+            self.awaiting_redraft_feedback = False
             answer = self._format_answer(result)
             self.chat_history.append(("Assistant", answer))
             return answer
 
+        if self._is_redraft_intent(user_text):
+            message = "Redraft selected. Reply with the plan changes you want."
+            self.chat_history.append(("Assistant", message))
+            self.awaiting_redraft_feedback = True
+            return message
+
         if self._is_exit_intent(user_text):
             self.active_session = None
+            self.awaiting_redraft_feedback = False
             message = "Plan loop exited. No answer drafted for this turn."
             self.chat_history.append(("Assistant", message))
             return message
 
-        self.active_session = self.chatbot.redraft_plan(self.active_session, user_text)
-        plan_text = self._format_plan(self.active_session)
-        self.chat_history.append(("Assistant", plan_text))
-        return plan_text
+        message = "Choose one option: accept, redraft, or exit plan."
+        self.chat_history.append(("Assistant", message))
+        return message
 
     def _format_plan(self, session: PlanningSession) -> str:
         evidence_needed = session.plan.evidence_needed or ["None"]
@@ -82,7 +98,10 @@ class TerminalChatApp:
             *[f"- {item}" for item in evidence_needed],
             "Proposed Actions:",
             *[f"- {item}" for item in proposed_actions],
-            "Reply with plan feedback to redraft, 'accept' to execute, or 'exit plan' to abort this turn.",
+            "Options:",
+            "- accept",
+            "- redraft",
+            "- exit plan",
         ]
         if session.revision_count > 0:
             lines.insert(1, f"Revision: {session.revision_count}")
@@ -97,6 +116,10 @@ class TerminalChatApp:
     def _is_accept_intent(self, user_text: str) -> bool:
         normalized = " ".join(user_text.lower().split())
         return normalized in self.ACCEPT_PLAN_TOKENS
+
+    def _is_redraft_intent(self, user_text: str) -> bool:
+        normalized = " ".join(user_text.lower().split())
+        return normalized in self.REDRAFT_PLAN_TOKENS
 
     def _is_exit_intent(self, user_text: str) -> bool:
         normalized = " ".join(user_text.lower().split())

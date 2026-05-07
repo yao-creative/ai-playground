@@ -9,12 +9,11 @@ from models import (
     DraftResult,
     EvidencePolicyConfig,
     PlanResult,
-    ReviewResult,
-    RevisionConfig,
+    PlanningSession,
     StopDecision,
     ToolCall,
 )
-from stages import Drafter, Planner, Redrafter, Reviewer
+from stages import Drafter, PlanRedrafter, Planner
 from tools import DocumentTools
 
 
@@ -44,21 +43,22 @@ Do not output anything else."""
         retrieval_strategy,
         max_steps: int = 4,
         evidence_policy: EvidencePolicyConfig | None = None,
-        revision_config: RevisionConfig | None = None,
     ) -> None:
         self.client = client
         self.model = model
         self.max_steps = max_steps
         self.tools = DocumentTools(documents, retrieval_strategy)
         self.evidence_policy = evidence_policy or EvidencePolicyConfig()
-        self.revision_config = revision_config or RevisionConfig()
 
         self.planner = Planner(client=client, model=model)
+        self.plan_redrafter = PlanRedrafter(client=client, model=model)
         self.drafter = Drafter(client=client, model=model)
-        self.reviewer = Reviewer(client=client, model=model)
-        self.redrafter = Redrafter(client=client, model=model)
 
-    def answer(self, user_input: str, chat_history: list[tuple[str, str]] | None = None) -> AgentRunResult:
+    def prepare_plan(
+        self,
+        user_input: str,
+        chat_history: list[tuple[str, str]] | None = None,
+    ) -> PlanningSession | AgentRunResult:
         history = chat_history or []
         steps, blocked = self._collect_evidence(user_input=user_input, chat_history=history)
         if blocked:
@@ -70,33 +70,40 @@ Do not output anything else."""
             chat_history=history,
             evidence_summary=evidence_summary,
         )
-        draft = self.drafter.run(
+        return PlanningSession(
             user_input=user_input,
+            chat_history=list(history),
+            steps=steps,
+            evidence_summary=evidence_summary,
             plan=plan,
-            evidence_summary=evidence_summary,
-            chat_history=history,
-        )
-        review = self.reviewer.run(
-            user_input=user_input,
-            draft=draft,
-            evidence_summary=evidence_summary,
         )
 
-        redrafts = max(0, min(int(self.revision_config.max_redrafts), 1))
-        if not review.pass_review and redrafts > 0:
-            draft = self.redrafter.run(
-                user_input=user_input,
-                prior_draft=draft,
-                review=review,
-                evidence_summary=evidence_summary,
-            )
-            review = self.reviewer.run(
-                user_input=user_input,
-                draft=draft,
-                evidence_summary=evidence_summary,
-            )
+    def redraft_plan(self, session: PlanningSession, user_feedback: str) -> PlanningSession:
+        revised_plan = self.plan_redrafter.run(
+            user_input=session.user_input,
+            prior_plan=session.plan,
+            user_feedback=user_feedback,
+            chat_history=session.chat_history,
+            evidence_summary=session.evidence_summary,
+        )
+        return PlanningSession(
+            user_input=session.user_input,
+            chat_history=list(session.chat_history),
+            steps=list(session.steps),
+            evidence_summary=session.evidence_summary,
+            plan=revised_plan,
+            revision_count=session.revision_count + 1,
+            status="awaiting_user_decision",
+        )
 
-        return self._finalize_result(draft=draft, review=review, steps=steps, plan=plan)
+    def execute_accepted_plan(self, session: PlanningSession) -> AgentRunResult:
+        draft = self.drafter.run(
+            user_input=session.user_input,
+            plan=session.plan,
+            evidence_summary=session.evidence_summary,
+            chat_history=session.chat_history,
+        )
+        return self._finalize_result(draft=draft, steps=session.steps, plan=session.plan)
 
     def _collect_evidence(
         self,
@@ -298,26 +305,12 @@ Do not output anything else."""
         self,
         *,
         draft: DraftResult,
-        review: ReviewResult,
         steps: list[AgentStep],
         plan: PlanResult,
     ) -> AgentRunResult:
         cited_doc_ids = [str(doc_id) for doc_id in draft.cited_doc_ids]
-        supported = bool(draft.supported and review.pass_review and cited_doc_ids)
-
-        if not review.pass_review:
-            return AgentRunResult(
-                final_answer=self.SAFE_FALLBACK,
-                cited_doc_ids=[],
-                supported=False,
-                steps=steps,
-                plan=plan,
-                review=review,
-            )
-
+        supported = bool(draft.supported and cited_doc_ids)
         answer = draft.answer.strip() or self.SAFE_FALLBACK
-        if draft.supported and not cited_doc_ids:
-            supported = False
 
         if supported:
             return AgentRunResult(
@@ -326,7 +319,6 @@ Do not output anything else."""
                 supported=True,
                 steps=steps,
                 plan=plan,
-                review=review,
             )
 
         return AgentRunResult(
@@ -335,5 +327,4 @@ Do not output anything else."""
             supported=False,
             steps=steps,
             plan=plan,
-            review=review,
         )

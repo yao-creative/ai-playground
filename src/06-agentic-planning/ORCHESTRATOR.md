@@ -1,92 +1,59 @@
 # Orchestrator Function Reference
 
-This document explains the functions in `orchestrator.py`, what each does, and why it exists.
-
 ## File
 
 - `src/06-agentic-planning/orchestrator.py`
 
-## Data Structure
+## Core Structures
 
 ### `_EvidencePolicyState`
-- What: Internal mutable state for evidence-loop policy checks.
-- Fields:
-  - `search_count`: number of `search_documents` calls used so far.
-  - `prior_call_counts`: normalized tool-call -> execution count.
-  - `prior_call_errors`: normalized tool-call -> whether previous attempt errored.
-- Why: Keeps duplicate-call and search-budget enforcement separate from stage logic.
+- Tracks search-call count, normalized call counts, and whether prior calls errored.
+- Exists to keep evidence-loop policy state separate from plan generation state.
 
-## Class
+### `PlanningSession`
+- Carries the user question, inherited chat history, evidence steps, evidence summary, current plan, and revision count.
+- Exists so the terminal app can keep a stable plan loop without recollecting evidence on every redraft.
 
-### `AgenticPlanningOrchestrator`
-- What: Control plane for one user turn.
-- Why: Centralizes deterministic workflow ordering and safety gates.
+## `AgenticPlanningOrchestrator`
 
-### `__init__(...)`
-- What: Wires model client, retrieval tools, policy config, revision config, and stage objects (`Planner`, `Drafter`, `Reviewer`, `Redrafter`).
-- Why: Dependency injection keeps orchestration testable and easy to swap components.
+### `prepare_plan(user_input, chat_history=None) -> PlanningSession | AgentRunResult`
+- Collects evidence first.
+- Returns a safe fallback result if evidence collection is blocked.
+- Otherwise builds the initial `PlanResult` and packages it into a `PlanningSession`.
 
-### `answer(user_input, chat_history=None) -> AgentRunResult`
-- What: Main entrypoint for one turn.
-- Steps:
-  1. Collect evidence with bounded tool loop.
-  2. Build evidence summary.
-  3. Run planner, drafter, reviewer.
-  4. Optionally run one redraft + second review.
-  5. Finalize output with gating rules.
-- Why: Enforces `plan -> draft -> review -> redraft -> review -> finalize` in one explicit pipeline.
+### `redraft_plan(session, user_feedback) -> PlanningSession`
+- Rewrites the current plan using the same evidence snapshot plus the user feedback.
+- Increments `revision_count`.
+- Does not rerun retrieval.
 
-### `_collect_evidence(...) -> tuple[list[AgentStep], bool]`
-- What: Executes bounded Action/Stop loop to gather evidence before drafting.
-- Returns:
-  - `steps`: tool execution trace.
-  - `blocked`: whether loop stopped for policy/validation failure.
-- Why: Isolates tool-use phase from writing/review phases and allows early safe fallback.
+### `execute_accepted_plan(session) -> AgentRunResult`
+- Drafts the final answer from the accepted plan and existing evidence.
+- Finalizes support status from the draft output and citation state.
 
-### `_decide_next_action(...) -> ActionDecision | StopDecision`
-- What: Sends evidence-loop prompt to model and parses result.
-- Why: Keeps model call/parsing for evidence actions in one place.
+## Evidence Helpers
 
-### `_build_action_prompt(...) -> str`
-- What: Builds prompt for evidence controller with tools, rules, history, prior tool results, and remaining budget.
-- Why: Makes loop behavior explicit and reproducible.
+### `_collect_evidence(...)`
+- Runs the bounded `Action` / `Stop` loop.
+- Returns `(steps, blocked)` so the caller can short-circuit safely.
 
-### `_parse_decision(response_text) -> ActionDecision | StopDecision`
-- What: Parses model output for `Action: {...}` or `Stop: {...}` envelopes.
-- Why: Converts free text into strict control-plane decisions.
+### `_build_action_prompt(...)`
+- Serializes tool schemas, policy rules, recent chat history, and prior tool results into the evidence-controller prompt.
 
-### `_extract_json_object(response_text) -> dict | None`
-- What: Extracts JSON object from possibly noisy model text.
-- Why: Defensive parsing to reduce hard failures from minor formatting drift.
+### `_parse_decision(...)`
+- Converts noisy model output into either `ActionDecision` or `StopDecision`.
 
-### `_normalize_tool_call(tool_call) -> str`
-- What: Canonical JSON string for tool name + args.
-- Why: Stable key for duplicate detection and prior-call bookkeeping.
+### `_should_block_tool_call(...)`
+- Applies duplicate-call policy and search-budget limits.
 
-### `_should_block_tool_call(tool_call, policy_state) -> bool`
-- What: Applies evidence policy:
-  - duplicate handling strategy
-  - max search calls
-- Why: Prevents low-value loops and controls tool budget.
+### `_build_evidence_summary(...)`
+- Converts collected steps into compact JSON lines shared by planner, plan redrafter, and drafter.
 
-### `_record_call_outcome(tool_call, error, policy_state) -> None`
-- What: Updates call counts and error history after each tool execution.
-- Why: Feeds duplicate strategy (`retry_on_error_only`, etc.).
+### `_finalize_result(...)`
+- Ensures `supported=True` only when citations are present.
+- Returns unsupported output otherwise.
 
-### `_build_evidence_summary(steps) -> str`
-- What: Serializes tool trace into compact JSON lines.
-- Why: Provides planner/drafter/reviewer/redrafter with the same grounded evidence snapshot.
+## Safety Invariants
 
-### `_finalize_result(draft, review, steps, plan) -> AgentRunResult`
-- What: Final gate for output correctness.
-- Rules:
-  - If review fails: return safe unsupported fallback.
-  - Supported answers require citations.
-  - Preserve plan/review/step trace in result.
-- Why: Guarantees safety invariants even if generation stages produce optimistic output.
-
-## Safety Invariants Enforced Here
-
-- Failed reviewer gate => unsupported fallback.
-- `supported=true` is valid only when citations exist.
-- Evidence-loop policy can stop low-signal or invalid tool execution.
+- Evidence-loop policy can stop invalid or low-value tool use.
+- Plan redrafts reuse evidence; they do not silently recollect it.
+- Supported answers require citations.

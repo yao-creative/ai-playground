@@ -37,10 +37,14 @@ class DraftResult:
 
 
 @dataclass(frozen=True)
-class ReviewResult:
-    pass_review: bool
-    issues: list[str]
-    revision_instructions: str
+class PlanningSession:
+    user_input: str
+    chat_history: list[tuple[str, str]]
+    steps: list[AgentStep]
+    evidence_summary: str
+    plan: PlanResult
+    revision_count: int = 0
+    status: str = "awaiting_user_decision"
 
 
 @dataclass(frozen=True)
@@ -50,12 +54,6 @@ class AgentRunResult:
     supported: bool
     steps: list[AgentStep] = field(default_factory=list)
     plan: PlanResult | None = None
-    review: ReviewResult | None = None
-
-
-@dataclass(frozen=True)
-class RevisionConfig:
-    max_redrafts: int = 1
 
 
 @dataclass(frozen=True)
